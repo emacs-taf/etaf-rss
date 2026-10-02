@@ -1,0 +1,18 @@
+{
+  "ebox": {
+    "entry": "ebox",
+    "url": "git@gitea.gklazycat.heiyu.space:geekinney/ebox.git"
+  },
+  "ecss": {
+    "entry": "ecss",
+    "url": "git@gitea.gklazycat.heiyu.space:geekinney/ecss.git"
+  },
+  "etaf": {
+    "entry": "etaf",
+    "url": "git@gitea.gklazycat.heiyu.space:geekinney/etaf.git"
+  },
+  "etaf-ui": {
+    "entry": "etaf-ui",
+    "url": "git@gitea.gklazycat.heiyu.space:geekinney/etaf-ui.git"
+  }
+}
