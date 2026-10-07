@@ -1,18 +1,18 @@
 {
   "ebox": {
     "entry": "ebox",
-    "url": "git@gitea.gklazycat.heiyu.space:geekinney/ebox.git"
+    "url": "git@gitea.gklazycat.heiyu.space:emacs-taf/ebox.git"
   },
   "ecss": {
     "entry": "ecss",
-    "url": "git@gitea.gklazycat.heiyu.space:geekinney/ecss.git"
+    "url": "git@gitea.gklazycat.heiyu.space:emacs-taf/ecss.git"
   },
   "etaf": {
     "entry": "etaf",
-    "url": "git@gitea.gklazycat.heiyu.space:geekinney/etaf.git"
+    "url": "git@gitea.gklazycat.heiyu.space:emacs-taf/etaf.git"
   },
   "etaf-ui": {
     "entry": "etaf-ui",
-    "url": "git@gitea.gklazycat.heiyu.space:geekinney/etaf-ui.git"
+    "url": "git@gitea.gklazycat.heiyu.space:emacs-taf/etaf-ui.git"
   }
 }
