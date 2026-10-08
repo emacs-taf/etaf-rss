@@ -632,11 +632,9 @@ replaced; the session keeps its content and timers."
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (when-let* ((runtime (etaf-runtime-for-buffer buffer)))
-          (let ((window (get-buffer-window buffer t))
-                (etaf-rss--remounting t))
+          (let ((etaf-rss--remounting t))
             (etaf-unmount runtime)
-            (etaf-mount buffer (etaf-rss-view model)
-                        (etaf-rss--viewport-options model window))
+            (etaf-mount buffer (etaf-rss-view model))
             (etaf-runtime-flush (etaf-runtime-for-buffer buffer))))))))
 
 (defun etaf-rss-view (&optional model)
@@ -681,8 +679,9 @@ requests, so a later `etaf-rss-open' with the same MODEL works again."
     ;; The layout, page size and reading width come from the window that shows
     ;; the reader, so the first paint already fits it.
     (etaf-rss--sync-layout model (selected-window))
-    (etaf-mount buffer (etaf-rss-view model)
-                (etaf-rss--viewport-options model (selected-window)))
+    ;; The mount tracks the window's pixel width, so the reader follows
+    ;; resizes and windows that show it later.
+    (etaf-mount buffer (etaf-rss-view model))
     (etaf-runtime-flush (etaf-runtime-for-buffer buffer))
     buffer))
 

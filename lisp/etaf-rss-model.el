@@ -1131,13 +1131,6 @@ resize."
           (etaf-rss--write app :reader-lines (etaf-rss-wrap-blocks blocks reader-columns)))))
     layout))
 
-(defun etaf-rss--viewport-options (_app window)
-  "Return mount viewport options for APP sized for WINDOW, or nil when dead.
-The width is the window's body width in pixels, not a whole number of cells,
-so the reader's background reaches the window edge."
-  (when (and window (window-live-p window))
-    (list :viewport-width (window-body-width window t))))
-
 (defun etaf-rss--window-size-change (frame)
   "Record FRAME's size change; apply it once the resize settles."
   (when (frame-live-p frame)
