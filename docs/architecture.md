@@ -39,7 +39,7 @@ keys / mouse ─→ app commands ─→ model actions ─→ service client
                                      └─────────────────┘
                                      reactive refs
                                           │
-                     app Component reads refs ─→ views ─→ Ebox publication
+                     app Component reads refs ─→ views ─→ Ebox flush
 ```
 
 - The **service client** is the only code that touches the network and the
