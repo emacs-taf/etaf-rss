@@ -129,7 +129,7 @@ so switching scopes never shifts the label."
         :padding (list (list 'lh 0) (list 'ch (or indent (if compact 0 1))))
         :flex-shrink 0
         :role 'button :tab-index 0 :pointer 'hand
-        :hover-style (etaf-rss--hover-surface)
+        :hover-style (unless active (etaf-rss--hover-surface))
         :background-color (and active (etaf-rss-color :accent-soft))
         :color (if active (etaf-rss-color :ink) (etaf-rss-color :muted))
         :font-weight (if active 'bold 'normal)
@@ -254,7 +254,7 @@ from the header's source menu, which scales to any number of them."
       :height '(lh 1) :align-items 'center :gap '((lh 0) (ch 1))
       :padding '((lh 0) (ch 1))
       :role 'button :tab-index 0 :pointer 'hand
-      :hover-style (etaf-rss--hover-surface)
+      :hover-style (unless (plist-get item :active) (etaf-rss--hover-surface))
       :help-echo (plist-get item :label)
       :background-color (and (plist-get item :active) (etaf-rss-color :accent-soft))
       :color (if (plist-get item :active) (etaf-rss-color :accent) (etaf-rss-color :dim))
@@ -300,7 +300,7 @@ gold star, and both states never change the text's width."
         :color (etaf-rss-color :ink)
         :font-weight (if (plist-get row :read) 'normal 'bold)
         :pointer 'hand
-        :hover-style (etaf-rss--hover-surface)
+        :hover-style (unless selected (etaf-rss--hover-surface))
         :help-echo (or (plist-get row :title) "打开文章")
         :on-press (lambda () (funcall press index))
     (box :height '(lh 1) :justify-self 'center
