@@ -6,6 +6,13 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Opening the minibuffer (`M-x`, a completion popup or the reader's own
+  prompts) no longer shrinks the article page or the reading budget to the
+  lines the prompt borrows. The reader keeps the layout it committed for the
+  window and returns to the full view unchanged once the prompt closes.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added
