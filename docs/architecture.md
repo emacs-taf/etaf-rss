@@ -63,9 +63,9 @@ keys / mouse ─→ app commands ─→ model actions ─→ service client
   while the reader slices pre-wrapped lines. A resize or a palette change
   re-fits the layout; no glyph may grow a row, because an icon falls back to a
   taller font otherwise. Lines borrowed by an active minibuffer or completion
-  popup are not a resize: the reader keeps the budget it committed until the
-  prompt closes, matching the canvas, which Ebox leaves at its committed
-  viewport.
+  popup are not a resize (`etaf-transient-space-borrowed-p'): the reader keeps
+  the budget it committed until the prompt closes, like the canvas, which Ebox
+  leaves at its committed viewport.
 - **Reading width.** The article is wrapped once per article and width; the
   reader only slices the result. `etaf-rss--reader-capacity` subtracts the
   chrome and insets, and `etaf-rss-reading-measure` caps the column, so a line

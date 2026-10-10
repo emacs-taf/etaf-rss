@@ -1146,19 +1146,6 @@ resize."
           (run-at-time etaf-rss--resize-settle-delay nil
                        #'etaf-rss--window-size-change-apply))))
 
-(defun etaf-rss--transient-space-borrow-p (frame window app)
-  "Whether FRAME's transient UI borrows WINDOW's lines from APP's layout.
-An active minibuffer or completion popup takes lines from displayed windows
-without the user resizing the frame; the reader keeps the layout it
-committed, exactly as the canvas keeps its committed viewport.  Window
-growth is real geometry and always applies.  A shorter window with no
-transient UI above it is a real resize too."
-  (let ((minibuffer (active-minibuffer-window)))
-    (and minibuffer
-         (eq (window-frame minibuffer) frame)
-         (< (window-body-height window)
-            (or (etaf-rss--read app :window-rows) 0)))))
-
 (defun etaf-rss--window-size-change-apply ()
   "Adapt every mounted reader to its window's settled size.
 A window whose lines an active minibuffer borrows keeps the layout the
@@ -1174,7 +1161,8 @@ command or completion popup is asking for input."
           (let ((buffer (window-buffer window)))
             (when (buffer-live-p buffer)
               (when-let* ((model (buffer-local-value 'etaf-rss--model buffer)))
-                (unless (etaf-rss--transient-space-borrow-p frame window model)
+                (unless (etaf-transient-space-borrowed-p
+                         window (etaf-rss--read model :window-rows))
                   (etaf-rss--sync-layout model window))))))))))
 
 ;;; ---------------------------------------------------------------------------
