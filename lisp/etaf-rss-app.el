@@ -41,12 +41,8 @@
 
 (defvar etaf-rss-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "j") #'etaf-rss--next-row)
-    (define-key map (kbd "k") #'etaf-rss--previous-row)
     (define-key map (kbd "C-n") #'etaf-rss--next-row)
     (define-key map (kbd "C-p") #'etaf-rss--previous-row)
-    (define-key map (kbd "<down>") #'etaf-rss--next-row)
-    (define-key map (kbd "<up>") #'etaf-rss--previous-row)
     (define-key map (kbd "n") #'etaf-rss--next-unread)
     (define-key map (kbd "p") #'etaf-rss--previous-unread)
     (define-key map (kbd "<wheel-up>") #'etaf-rss--wheel-up)
@@ -80,8 +76,15 @@
     map)
   "Keymap of the buffer opened by `etaf-rss-open'.
 It keeps Ebox's TAB focus cycling and RET activation and replaces the
-scrolling keys with reader commands: j/k move the selection and SPC scrolls
-the article.")
+scrolling keys with reader commands: arrows move the selection and SPC
+scrolls the article.")
+
+(defun etaf-rss--direction (direction)
+  "Move the RSS selection with DIRECTION and return the result symbol."
+  (pcase direction
+    ('down (etaf-rss--next-row) 'handled)
+    ('up (etaf-rss--previous-row) 'handled)
+    (_ 'release)))
 
 (defvar etaf-rss--command-maps
   (list (cons 'etaf-rss--model
@@ -524,6 +527,7 @@ interaction repaints the smallest subtree that changed."
   :view
   (flex :flex-direction 'column :width '(vw 100) :height '(vh 100)
         :padding-top '(lh 1) :padding-bottom '(lh 1)
+        :on-direction #'etaf-rss--direction
         :color (etaf-rss-color :ink) :bgcolor (etaf-rss-color :bg)
     (flex :width 'stretch :flex-grow 1 :flex-basis 'auto :min-height '(lh 0)
           :align-items 'stretch

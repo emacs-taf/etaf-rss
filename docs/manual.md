@@ -39,7 +39,7 @@ To embed the reader in a larger ETAF view, mount `etaf-rss-view` yourself:
 ## Browsing and reading
 
 `1`, `2` and `3` show every stored article, the unread ones and the starred
-ones; clicking a feed or folder in the sidebar shows its slice. `j` / `k`
+ones; clicking a feed or folder in the sidebar shows its slice. The arrows
 move the selection and page the list when it walks off the page.
 
 On a wide frame the reading pane always shows the selected article: it loads

@@ -51,7 +51,7 @@ At a narrow frame the scopes move into a header strip:
 
 | Key | Action |
 | --- | --- |
-| `j` / `k`, arrows | select the next / previous article |
+| Arrows | select the next / previous article |
 | `n` / `p` | next / previous unread article |
 | `RET` | open the selected article (compact layout switches to the reader) |
 | `SPC` / `C-v`, `M-v` | scroll the article (or page the list on a compact list) |
