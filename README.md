@@ -68,7 +68,7 @@ At a narrow frame the scopes move into a header strip:
 | `v` | switch list / reading pane on a compact layout |
 | `g` / `R` | refresh the current scope / every subscription |
 | `T` | dark / light palette |
-| `?` | key help |
+| `C-c h` | key help |
 | `q` | close the reader |
 
 ## Prerequisites

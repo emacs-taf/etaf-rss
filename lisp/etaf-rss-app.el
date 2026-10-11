@@ -75,7 +75,7 @@
     (define-key map (kbd "R") #'etaf-rss--refresh-all)
     (define-key map (kbd "G") #'etaf-rss--last-row)
     (define-key map (kbd "T") #'etaf-rss--cycle-theme)
-    (define-key map (kbd "?") #'etaf-rss--help)
+    (define-key map (kbd "C-c h") #'etaf-rss--help)
     (define-key map (kbd "q") #'etaf-rss-close)
     map)
   "Keymap of the buffer opened by `etaf-rss-open'.
