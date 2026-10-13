@@ -584,12 +584,15 @@ between characters, so CJK text and long URLs never clip."
                    (> index start))
           (let ((break (and last-space
                             (> last-space start)
-                            (<= last-space index))))
+                            (<= last-space index)
+                            last-space)))
             (if break
                 (progn
                   (push (substring text start break) lines)
                   (setq start (1+ break)
-                        width 0
+                        ;; 已经扫过的尾段属于新行，宽度要接上而不是归零，
+                        ;; 否则新行会少算宽度、超出列宽。
+                        width (string-width (substring text (1+ break) index))
                         last-space nil))
               (push (substring text start index) lines)
               (setq start index

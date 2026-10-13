@@ -21,6 +21,11 @@
       "purpose": "OPML subscriptions parse with folders, article HTML renders to heading/item/link blocks, wrapping respects the column width, and relative time reads naturally."
     },
     {
+      "name": "etaf-rss-tests-wraps-prose-at-spaces",
+      "file": "tests/etaf-rss-tests.el",
+      "purpose": "Prose with spaces wraps at the last space inside the column width instead of signalling an integerp error."
+    },
+    {
       "name": "etaf-rss-tests-new-session-is-headless",
       "file": "tests/etaf-rss-tests.el",
       "purpose": "A session created without a buffer starts on the all scope, in the wide layout, with no rows and no requests."

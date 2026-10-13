@@ -107,6 +107,18 @@
   (should (equal (etaf-rss-plain-text "<p>一段</p><p>两段</p>") "一段 两段"))
   (should (equal (etaf-rss-relative-time (- (float-time) 30)) "刚刚")))
 
+(ert-deftest etaf-rss-tests-wraps-prose-at-spaces ()
+  "Prose with spaces wraps at the last space instead of signalling."
+  (let* ((text "Article URL: https://example.com/a-very-long-link-without-spaces")
+         (lines (etaf-rss-wrap-blocks (list (list :kind 'para :text text)) 24)))
+    (should (> (length lines) 1))
+    (should (equal (plist-get (car lines) :text) "Article URL:"))
+    (should (cl-every (lambda (line) (<= (string-width (plist-get line :text)) 24))
+                      lines))
+    (should (equal (replace-regexp-in-string
+                    " " "" (mapconcat (lambda (line) (plist-get line :text)) lines ""))
+                   (replace-regexp-in-string " " "" text)))))
+
 ;;; ---------------------------------------------------------------------------
 ;;; Session, subscription and scopes
 ;;; ---------------------------------------------------------------------------
