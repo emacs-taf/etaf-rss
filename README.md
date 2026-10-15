@@ -68,8 +68,12 @@ At a narrow frame the scopes move into a header strip:
 | `v` | switch list / reading pane on a compact layout |
 | `g` / `R` | refresh the current scope / every subscription |
 | `T` | dark / light palette |
-| `C-c h` | key help |
+| `?` / `C-c h` | searchable key help inside the reader |
 | `q` | close the reader |
+
+Help uses the reader's own theme and window. Search with `/`; Escape leaves
+search editing before closing help. Clicking the dimmed background also closes
+it and restores the previous focus.
 
 ## Prerequisites
 

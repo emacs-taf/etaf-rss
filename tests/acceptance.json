@@ -11,6 +11,11 @@
   "support": [],
   "cases": [
     {
+      "name": "etaf-rss-tests-help-stays-in-reader",
+      "file": "tests/etaf-rss-help-tests.el",
+      "purpose": "Both help keys show labelled effective bindings in the existing reader, search treats ? as text, Escape exits one layer at a time, and backdrop dismissal restores focus without changing the scope."
+    },
+    {
       "name": "etaf-rss-tests-parses-rss-atom-and-json",
       "file": "tests/etaf-rss-tests.el",
       "purpose": "RSS, Atom and JSON Feed fixtures parse into the documented article shape with titles, counts and publish times."

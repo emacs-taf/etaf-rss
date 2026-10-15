@@ -6,6 +6,13 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `?` and `C-c h` now open the same searchable, themed modal inside the
+  reader. Its concise labels come from the effective bindings, not a static
+  message. Escape exits one layer at a time; clicking outside closes help
+  and restores the reader focus without splitting the window.
+
 ### Fixed
 
 - Opening the minibuffer (`M-x`, a completion popup or the reader's own

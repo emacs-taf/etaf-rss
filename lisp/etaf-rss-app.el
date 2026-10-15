@@ -39,40 +39,50 @@
 (defvar-local etaf-rss--model nil
   "Reader session shown by the current buffer's runtime.")
 
+(defconst etaf-rss--bindings
+  '(("C-n" etaf-rss--next-row "下一篇文章")
+                       ("C-p" etaf-rss--previous-row "上一篇文章")
+                       ("n" etaf-rss--next-unread "下一篇未读")
+                       ("p" etaf-rss--previous-unread "上一篇未读")
+                       ("<wheel-up>" etaf-rss--wheel-up "向上滚动")
+                       ("<wheel-down>" etaf-rss--wheel-down "向下滚动")
+                       ("<home>" etaf-rss--first-row "第一篇文章")
+                       ("<end>" etaf-rss--last-row "最后一篇文章")
+                       ("<next>" etaf-rss--next-page "列表下一页")
+                       ("<prior>" etaf-rss--previous-page "列表上一页")
+                       ("C-v" etaf-rss--scroll-page-down "阅读下一页")
+                       ("M-v" etaf-rss--scroll-page-up "阅读上一页")
+                       ("SPC" etaf-rss--scroll-page-down "阅读下一页")
+                       ("S-SPC" etaf-rss--scroll-page-up "阅读上一页")
+                       ("RET" etaf-rss--activate "打开文章／激活控件")
+                       ("o" etaf-rss--open-in-browser "在浏览器打开")
+                       ("s" etaf-rss--toggle-star "收藏／取消收藏")
+                       ("m" etaf-rss--toggle-read "切换已读状态")
+                       ("A" etaf-rss--mark-all-read "当前分类全部已读")
+                       ("M" etaf-rss--mark-above-read "当前及以上标为已读")
+                       ("a" etaf-rss--prompt-add-feed "添加订阅")
+                       ("d" etaf-rss--prompt-remove-feed "取消订阅")
+                       ("i" etaf-rss--import-opml "导入 OPML")
+                       ("e" etaf-rss--export-opml "导出 OPML")
+                       ("/" etaf-rss--search "搜索文章")
+                       ("S" etaf-rss--search "搜索文章")
+                       ("1" etaf-rss--all "全部文章")
+                       ("2" etaf-rss--unread "未读文章")
+                       ("3" etaf-rss--starred "收藏文章")
+                       ("v" etaf-rss--toggle-pane "切换列表／阅读")
+                       ("g" etaf-rss--refresh "刷新当前分类")
+                       ("R" etaf-rss--refresh-all "刷新全部订阅")
+                       ("G" etaf-rss--last-row "最后一篇文章")
+                       ("T" etaf-rss--cycle-theme "切换深浅主题")
+                       ("C-c h" etaf-help "查看快捷键")
+                       ("q" etaf-rss-close "关闭阅读器"))
+  "Authoritative native reader bindings and their short help labels.")
+
 (defvar etaf-rss-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-n") #'etaf-rss--next-row)
-    (define-key map (kbd "C-p") #'etaf-rss--previous-row)
-    (define-key map (kbd "n") #'etaf-rss--next-unread)
-    (define-key map (kbd "p") #'etaf-rss--previous-unread)
-    (define-key map (kbd "<wheel-up>") #'etaf-rss--wheel-up)
-    (define-key map (kbd "<wheel-down>") #'etaf-rss--wheel-down)
-    (define-key map (kbd "<home>") #'etaf-rss--first-row)
-    (define-key map (kbd "<end>") #'etaf-rss--last-row)
-    (define-key map (kbd "<next>") #'etaf-rss--next-page)
-    (define-key map (kbd "<prior>") #'etaf-rss--previous-page)
-    (define-key map (kbd "RET") #'etaf-rss--activate)
-    (define-key map (kbd "o") #'etaf-rss--open-in-browser)
-    (define-key map (kbd "s") #'etaf-rss--toggle-star)
-    (define-key map (kbd "m") #'etaf-rss--toggle-read)
-    (define-key map (kbd "A") #'etaf-rss--mark-all-read)
-    (define-key map (kbd "M") #'etaf-rss--mark-above-read)
-    (define-key map (kbd "a") #'etaf-rss--prompt-add-feed)
-    (define-key map (kbd "d") #'etaf-rss--prompt-remove-feed)
-    (define-key map (kbd "i") #'etaf-rss--import-opml)
-    (define-key map (kbd "e") #'etaf-rss--export-opml)
-    (define-key map (kbd "/") #'etaf-rss--search)
-    (define-key map (kbd "S") #'etaf-rss--search)
-    (define-key map (kbd "1") #'etaf-rss--all)
-    (define-key map (kbd "2") #'etaf-rss--unread)
-    (define-key map (kbd "3") #'etaf-rss--starred)
-    (define-key map (kbd "v") #'etaf-rss--toggle-pane)
-    (define-key map (kbd "g") #'etaf-rss--refresh)
-    (define-key map (kbd "R") #'etaf-rss--refresh-all)
-    (define-key map (kbd "G") #'etaf-rss--last-row)
-    (define-key map (kbd "T") #'etaf-rss--cycle-theme)
-    (define-key map (kbd "C-c h") #'etaf-rss--help)
-    (define-key map (kbd "q") #'etaf-rss-close)
+    (dolist (binding etaf-rss--bindings)
+      (define-key map (kbd (car binding))
+                  (list 'menu-item (nth 2 binding) (nth 1 binding))))
     map)
   "Keymap of the buffer opened by `etaf-rss-open'.
 It keeps Ebox's TAB focus cycling and RET activation and replaces the
@@ -89,20 +99,14 @@ scrolls the article.")
 (defvar etaf-rss--command-maps
   (list (cons 'etaf-rss--model
               (let ((map (make-sparse-keymap)))
-                (define-key map [wheel-up] #'etaf-rss--wheel-up)
-                (define-key map [wheel-down] #'etaf-rss--wheel-down)
-                ;; These are scroll or window keys in the renderer's own
-                ;; minor-mode map, which wins over a major-mode map.  The
-                ;; reader owns them here where it can win.
-                (define-key map (kbd "n") #'etaf-rss--next-unread)
-                (define-key map (kbd "q") #'etaf-rss-close)
-                (define-key map (kbd "<next>") #'etaf-rss--next-page)
-                (define-key map (kbd "<prior>") #'etaf-rss--previous-page)
-                (define-key map (kbd "C-v") #'etaf-rss--scroll-page-down)
-                (define-key map (kbd "M-v") #'etaf-rss--scroll-page-up)
-                (define-key map (kbd "SPC") #'etaf-rss--scroll-page-down)
-                (define-key map (kbd "S-SPC") #'etaf-rss--scroll-page-up)
-                (define-key map (kbd "RET") #'etaf-rss--activate)
+                ;; Reuse the labelled bindings, including their menu metadata.
+                ;; This map only raises reader-owned keys above minor modes.
+                (dolist (binding etaf-rss--bindings)
+                  (when (member (car binding)
+                                '("<wheel-up>" "<wheel-down>" "n" "q"
+                                  "<next>" "<prior>" "C-v" "M-v" "SPC" "S-SPC" "RET"))
+                    (define-key map (kbd (car binding))
+                                (list 'menu-item (nth 2 binding) (nth 1 binding)))))
                 map)))
   "Reader bindings that must beat the renderer's own minor-mode map.
 `emulation-mode-map-alists' entries take precedence over every minor mode, so
@@ -370,17 +374,6 @@ COLUMNS is the body width of the event window and LAYOUT its layout."
       (with-current-buffer buffer (etaf-rss--remap-canvas-face)))
     (etaf-rss--repaint-palette model)))
 
-(defun etaf-rss--help ()
-  "Show the reader's key bindings."
-  (interactive)
-  (message
-   (concat "j/k 或滚轮选择 · 单击选中 · 双击/RET 阅读 · n/p 上下未读"
-           " · s 收藏 · m 标已读 · A 全部已读 · M 以上已读"
-           " · SPC/C-v 翻页 · o 浏览器打开"
-           " · 1/2/3 全部/未读/收藏 · / 搜索"
-           " · a 订阅 · d 退订 · i 导入 OPML · e 导出 OPML"
-           " · v 切换列表/阅读 · g 刷新 · R 刷新全部 · T 深浅色 · q 关闭")))
-
 ;;; ---------------------------------------------------------------------------
 ;;; Buffer helpers
 ;;; ---------------------------------------------------------------------------
@@ -402,7 +395,7 @@ The unmount before the new mount must not dispose the session, and the mount
 itself must not load the feeds again.")
 
 (defconst etaf-rss--footer-hint
-  "j/k 选择 · RET 阅读 · s 收藏 · m 已读 · g 刷新 · / 搜索 · ? 帮助"
+  "方向键选择 · RET 阅读 · s 收藏 · m 已读 · / 搜索 · ? 帮助"
   "Binding summary at the right edge of the reader's status bar.")
 
 (etaf-define-component etaf-rss--app-sidebar
@@ -483,7 +476,7 @@ when the list selection does."
    :total (etaf-rss--read session :refresh-total)
    :compact (etaf-rss--compact-layout-p session)
    :hint (if (etaf-rss--compact-layout-p session)
-             "j/k · RET · g · ?"
+             "方向键 · RET · g · ?"
            etaf-rss--footer-hint)))
 
 (etaf-define-component etaf-rss-app (&key model)
@@ -528,6 +521,9 @@ interaction repaints the smallest subtree that changed."
   (flex :flex-direction 'column :width '(vw 100) :height '(vh 100)
         :padding-top '(lh 1) :padding-bottom '(lh 1)
         :on-direction #'etaf-rss--direction
+        :aria-label "RSS 阅读器"
+        :help '("单击选择文章，再次点击打开阅读；窄窗可切换列表与正文。"
+                "取消订阅后仍保留收藏文章。刷新在后台逐个处理订阅。")
         :color (etaf-rss-color :ink) :bgcolor (etaf-rss-color :bg)
     (flex :width 'stretch :flex-grow 1 :flex-basis 'auto :min-height '(lh 0)
           :align-items 'stretch

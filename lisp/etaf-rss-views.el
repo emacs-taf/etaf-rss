@@ -449,7 +449,7 @@ with the reader's binding hint."
          :overflow 'hidden
       (text (expr (if (eq layout 'narrow)
                        "? 帮助"
-                     "j/k 选择 · RET 阅读 · v 切换"))))))
+                     "方向键选择 · RET 阅读 · v 切换"))))))
 
 (etaf-define-component etaf-rss--view-footer
     (&key message error summary hint refreshing done total compact)
