@@ -36,6 +36,27 @@ To embed the reader in a larger ETAF view, mount `etaf-rss-view` yourself:
 - `i` imports an OPML file (feeds already subscribed by URL are skipped), and
   `e` exports every subscription with its folders.
 
+## Full-text feeds
+
+Some sites publish only a short summary in their feeds. That is a property of
+the feed itself, so the recommended fix is a feed converter: subscribe to the
+converter's output and the full article body arrives in the standard
+`content:encoded` field, which the reader renders directly. The reader
+deliberately has no built-in scraper — the feed URL is the interface, so any
+converter works ([morss](https://github.com/pictuga/morss), RSS-Bridge, or
+your own), and an existing subscription can be switched to a converted URL at
+any time.
+
+With morss, for example:
+
+```text
+http://localhost:8000/www.sciencealert.com/feed   # your own instance
+https://morss.it/www.sciencealert.com/feed         # the public instance
+```
+
+Subscribe to that address like any other feed. Article links still point at
+the original site, so `o` opens the original article as usual.
+
 ## Browsing and reading
 
 `1`, `2` and `3` show every stored article, the unread ones and the starred

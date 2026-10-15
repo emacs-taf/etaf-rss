@@ -25,6 +25,9 @@ At a narrow frame the scopes move into a header strip:
 
 - Subscriptions: add a feed by URL, or by a site page and its advertised feed
   link; unsubscribe; file a subscription under a folder; collapse folders.
+- Full text: subscribe to any feed URL, so a converter such as
+  [morss](https://github.com/pictuga/morss) can turn summary-only feeds into
+  full articles; links keep pointing at the original site.
 - Reading: all / unread / starred scopes, per-feed and per-folder lists,
   newest first, with unread and starred state carried by colour and weight.
 - The reading pane renders the article's own HTML as wrapped blocks:
