@@ -11,6 +11,11 @@
   "support": [],
   "cases": [
     {
+      "name": "etaf-rss-tests-root-keys-own-the-canvas",
+      "file": "tests/etaf-rss-help-tests.el",
+      "purpose": "The opened reader paints its canvas with the palette, and its root keys switch the theme and close the reader instead of renderer scrolling."
+    },
+    {
       "name": "etaf-rss-tests-help-stays-in-reader",
       "file": "tests/etaf-rss-help-tests.el",
       "purpose": "Both help keys show labelled effective bindings in the existing reader, search treats ? as text, Escape exits one layer at a time, and backdrop dismissal restores focus without changing the scope."

@@ -2,8 +2,8 @@
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 ;; Author: ETAF contributors
-;; Version: 0.1.0
-;; Package-Requires: ((emacs "29.1") (etaf "0.2.1") (etaf-ui "0.1.0"))
+;; Version: 0.2.0
+;; Package-Requires: ((emacs "29.1") (etaf "0.3.0") (etaf-ui "0.2.0"))
 ;; Keywords: news, hypermedia, ui
 ;; URL: https://github.com/emacs-taf/etaf-rss
 
@@ -42,9 +42,13 @@
 ;; every stored article.  A caller-provided MODEL keeps its scope, selection
 ;; and open article, and is revived when it was displayed before.  It replaces
 ;; the selected window instead of following `display-buffer' rules that might
-;; split the frame.  The buffer gets `etaf-rss-mode-map' and hides its mode
-;; line; closing the buffer releases the session's timers and pending
-;; requests, so a later `etaf-rss-open' with the same MODEL works again.
+;; split the frame.  The buffer is an ETAF application (see `etaf-app-open'):
+;; its root keys replace the renderer's scrolling keys with reader commands,
+;; RET reaches a focused control before it opens the selected article, the
+;; mode line is hidden, and the layout follows each settled resize of the
+;; window.  `C-c h' lists the keys.  Closing the buffer releases the session's
+;; timers and pending requests, so a later `etaf-rss-open' with the same MODEL
+;; works again.
 ;;
 ;; Function: etaf-rss-close ()
 ;;;###autoload (autoload 'etaf-rss-close "etaf-rss" nil t)
@@ -336,10 +340,6 @@
 ;;
 ;; Variable: etaf-rss-buffer-name
 ;; Buffer `etaf-rss-open' mounts the reader into.
-;;
-;; Variable: etaf-rss-mode-map
-;; Keymap installed by `etaf-rss-open'.  It keeps Ebox's TAB focus cycling and
-;; replaces the scrolling keys with reader commands.
 ;;
 ;; Variable: etaf-rss-data-file
 ;; JSON file the reader stores subscriptions and article state in, default

@@ -36,9 +36,6 @@
   :type 'string
   :group 'etaf-rss)
 
-(defvar-local etaf-rss--model nil
-  "Reader session shown by the current buffer's runtime.")
-
 (defconst etaf-rss--bindings
   '(("C-n" etaf-rss--next-row "下一篇文章")
                        ("C-p" etaf-rss--previous-row "上一篇文章")
@@ -76,18 +73,10 @@
                        ("T" etaf-rss--cycle-theme "切换深浅主题")
                        ("C-c h" etaf-help "查看快捷键")
                        ("q" etaf-rss-close "关闭阅读器"))
-  "Authoritative native reader bindings and their short help labels.")
-
-(defvar etaf-rss-mode-map
-  (let ((map (make-sparse-keymap)))
-    (dolist (binding etaf-rss--bindings)
-      (define-key map (kbd (car binding))
-                  (list 'menu-item (nth 2 binding) (nth 1 binding))))
-    map)
-  "Keymap of the buffer opened by `etaf-rss-open'.
-It keeps Ebox's TAB focus cycling and RET activation and replaces the
-scrolling keys with reader commands: arrows move the selection and SPC
-scrolls the article.")
+  "Root keys of the reader and their short help labels.
+They replace the renderer's scrolling keys with reader commands: the arrows
+move the selection and SPC scrolls the article.  RET reaches a focused
+control first and otherwise opens the selected article.")
 
 (defun etaf-rss--direction (direction)
   "Move the RSS selection with DIRECTION and return the result symbol."
@@ -96,26 +85,9 @@ scrolls the article.")
     ('up (etaf-rss--previous-row) 'handled)
     (_ 'release)))
 
-(defvar etaf-rss--command-maps
-  (list (cons 'etaf-rss--model
-              (let ((map (make-sparse-keymap)))
-                ;; Reuse the labelled bindings, including their menu metadata.
-                ;; This map only raises reader-owned keys above minor modes.
-                (dolist (binding etaf-rss--bindings)
-                  (when (member (car binding)
-                                '("<wheel-up>" "<wheel-down>" "n" "q"
-                                  "<next>" "<prior>" "C-v" "M-v" "SPC" "S-SPC" "RET"))
-                    (define-key map (kbd (car binding))
-                                (list 'menu-item (nth 2 binding) (nth 1 binding)))))
-                map)))
-  "Reader bindings that must beat the renderer's own minor-mode map.
-`emulation-mode-map-alists' entries take precedence over every minor mode, so
-this alist lets the reader replace renderer scroll keys instead of having
-them silently shadowed.  The alist is enabled only in an opened buffer.")
-
 (defun etaf-rss--current-model ()
   "Return the model of the current RSS reader buffer."
-  (or etaf-rss--model
+  (or (etaf-app-state)
       (user-error "当前 buffer 不是 etaf-rss 阅读器")))
 
 ;;; ---------------------------------------------------------------------------
@@ -192,12 +164,11 @@ article instead."
                               (- (max 1 (etaf-rss--read model :reader-rows)))))))
 
 (defun etaf-rss--activate ()
-  "Open the Host at point, or the selected article in the reading pane."
+  "Open the selected article in the reading pane.
+A focused control or the pressable Host at point takes RET before this root
+key."
   (interactive)
-  (condition-case nil
-      (etaf-activate)
-    (user-error
-     (etaf-rss-activate-selection (etaf-rss--current-model)))))
+  (etaf-rss-activate-selection (etaf-rss--current-model)))
 
 (defun etaf-rss--open-in-browser ()
   "Open the selected article in the browser."
@@ -370,20 +341,7 @@ COLUMNS is the body width of the event window and LAYOUT its layout."
   (interactive)
   (let ((model (etaf-rss--current-model)))
     (etaf-rss-cycle-theme model)
-    (when-let* ((buffer (plist-get model :buffer)))
-      (with-current-buffer buffer (etaf-rss--remap-canvas-face)))
     (etaf-rss--repaint-palette model)))
-
-;;; ---------------------------------------------------------------------------
-;;; Buffer helpers
-;;; ---------------------------------------------------------------------------
-
-(defun etaf-rss--remap-canvas-face ()
-  "Paint this buffer's unpainted cells with the palette background.
-Ebox paints whole character cells, so a window body that is not a whole number
-of cells keeps a sub-cell remainder at its right or bottom edge.  Remapping
-the default face shows the reader background there instead of the frame's."
-  (face-remap-set-base 'default (list :background (etaf-rss-color :bg))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Application Component and entry points
@@ -634,7 +592,7 @@ replaced; the session keeps its content and timers."
         (when-let* ((runtime (etaf-runtime-for-buffer buffer)))
           (let ((etaf-rss--remounting t))
             (etaf-unmount runtime)
-            (etaf-mount buffer (etaf-rss-view model))
+            (etaf-mount buffer (etaf-rss--app-view model))
             (etaf-runtime-flush (etaf-runtime-for-buffer buffer))))))))
 
 (defun etaf-rss-view (&optional model)
@@ -643,55 +601,39 @@ MODEL defaults to a new session, exactly as `etaf-rss-open' creates one; pass
 a session from `etaf-rss-create' to embed the reader in your own mount."
   (etaf-view (etaf-rss-app :model (or model (etaf-rss-create)))))
 
+(defun etaf-rss--app-view (model)
+  "Return the View `etaf-rss-open' mounts for MODEL, with the root keys."
+  (etaf-view (etaf-rss-app :model model :keys etaf-rss--bindings)))
+
 (defun etaf-rss-open (&optional model)
   "Open the RSS reader and return its buffer.
 MODEL defaults to a session from `etaf-rss-create', so the reader opens on
 every stored article.  A caller-provided MODEL keeps its scope, selection and
 open article, and is revived when it was displayed before.  The reader
 replaces the selected window instead of following `display-buffer' rules that
-might split the frame, and closing the buffer releases its timers and pending
-requests, so a later `etaf-rss-open' with the same MODEL works again."
+might split the frame.  Its layout, page size and reading width come from
+that window and follow each settled resize; cells the reader does not paint
+take the palette background.  Closing the buffer releases its timers and
+pending requests, so a later `etaf-rss-open' with the same MODEL works again."
   (interactive)
   (let* ((model (or model (etaf-rss-create)))
-         (buffer (get-buffer-create etaf-rss-buffer-name)))
+         (buffer
+          (etaf-app-open
+           etaf-rss-buffer-name (etaf-rss--app-view model)
+           :state model
+           :background (lambda () (plist-get (etaf-rss--read model :theme) :ui-bg))
+           :on-fit (lambda (window)
+                     (plist-put model :buffer (current-buffer))
+                     (etaf-rss--sync-layout model window)))))
     (plist-put model :buffer buffer)
-    (with-current-buffer buffer
-      (setq-local etaf-rss--model model)
-      (setq-local truncate-lines t)
-      (setq-local mode-line-format nil)
-      (setq-local emulation-mode-map-alists
-                  (cons 'etaf-rss--command-maps
-                        (remq 'etaf-rss--command-maps emulation-mode-map-alists)))
-      ;; The reader owns every column it paints.  A sub-cell rounding
-      ;; remainder must not surface as Emacs's truncation glyph.
-      (setq-local buffer-display-table
-                  (let ((table (copy-sequence (or standard-display-table
-                                                  (make-display-table)))))
-                    (set-display-table-slot table 'truncation ?\s)
-                    table))
-      (etaf-rss--remap-canvas-face)
-      (use-local-map etaf-rss-mode-map))
-    ;; A native text app owns the window it was opened from: a general
-    ;; `display-buffer' rule must not split the frame into a playground-style
-    ;; pane, so open in the selected window and let the app fill it.
-    (let ((display-buffer-overriding-action '((display-buffer-same-window))))
-      (pop-to-buffer buffer))
-    ;; The layout, page size and reading width come from the window that shows
-    ;; the reader, so the first paint already fits it.
-    (etaf-rss--sync-layout model (selected-window))
-    ;; The mount tracks the window's pixel width, so the reader follows
-    ;; resizes and windows that show it later.
-    (etaf-mount buffer (etaf-rss-view model))
     (etaf-runtime-flush (etaf-runtime-for-buffer buffer))
     buffer))
 
 (defun etaf-rss-close ()
   "Unmount the reader and kill its buffer."
   (interactive)
-  (when-let* ((runtime (etaf-runtime-for-buffer etaf-rss-buffer-name)))
-    (etaf-unmount runtime))
-  (when-let* ((buffer (get-buffer etaf-rss-buffer-name)))
-    (kill-buffer buffer)))
+  (when (etaf-app-state etaf-rss-buffer-name)
+    (etaf-app-close etaf-rss-buffer-name)))
 
 (provide 'etaf-rss-app)
 ;;; etaf-rss-app.el ends here

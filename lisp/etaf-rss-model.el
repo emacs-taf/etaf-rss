@@ -100,17 +100,6 @@ nil to refresh only on request."
   :type '(choice (const :tag "Never" nil) integer)
   :group 'etaf-rss)
 
-(defvar etaf-rss--resize-timer nil
-  "Pending trailing task that applies settled window sizes.")
-
-(defvar etaf-rss--resize-frames nil
-  "Frames whose window sizes changed since the last applied batch.")
-
-(defconst etaf-rss--resize-settle-delay 0.12
-  "Seconds of quiet after the last resize event before refitting the layout.
-Dragging a window edge fires far more events than one publication costs, so
-the reader adapts once the drag settles.")
-
 ;;; ---------------------------------------------------------------------------
 ;;; Construction
 ;;; ---------------------------------------------------------------------------
@@ -1136,45 +1125,17 @@ resize."
           (etaf-rss--write app :reader-lines (etaf-rss-wrap-blocks blocks reader-columns)))))
     layout))
 
-(defun etaf-rss--window-size-change (frame)
-  "Record FRAME's size change; apply it once the resize settles."
-  (when (frame-live-p frame)
-    (cl-pushnew frame etaf-rss--resize-frames)
-    (when etaf-rss--resize-timer
-      (cancel-timer etaf-rss--resize-timer))
-    (setq etaf-rss--resize-timer
-          (run-at-time etaf-rss--resize-settle-delay nil
-                       #'etaf-rss--window-size-change-apply))))
-
-(defun etaf-rss--window-size-change-apply ()
-  "Adapt every mounted reader to its window's settled size.
-A window whose lines an active minibuffer borrows keeps the layout the
-reader already committed until that UI releases them: borrowing the lines
-must not recompute the page size or the article budget just because a
-command or completion popup is asking for input."
-  (setq etaf-rss--resize-timer nil)
-  (let ((frames (prog1 (nreverse etaf-rss--resize-frames)
-                  (setq etaf-rss--resize-frames nil))))
-    (dolist (frame frames)
-      (when (frame-live-p frame)
-        (dolist (window (window-list frame 'no-minibuf))
-          (let ((buffer (window-buffer window)))
-            (when (buffer-live-p buffer)
-              (when-let* ((model (buffer-local-value 'etaf-rss--model buffer)))
-                (unless (etaf-transient-space-borrowed-p
-                         window (etaf-rss--read model :window-rows))
-                  (etaf-rss--sync-layout model window))))))))))
-
 ;;; ---------------------------------------------------------------------------
 ;;; Session lifecycle
 ;;; ---------------------------------------------------------------------------
 
 (defun etaf-rss--start (app)
-  "Start APP: fit the layout, refresh its state and follow window resizes."
+  "Start APP: fit the layout and refresh its state.
+An opened reader refits the layout after each settled resize through its
+application window fit (see `etaf-rss-open')."
   (setf (plist-get app :disposed) nil
         (plist-get app :started-at) (float-time))
-  (etaf-rss--sync-layout app)
-  (add-hook 'window-size-change-functions #'etaf-rss--window-size-change))
+  (etaf-rss--sync-layout app))
 
 (defun etaf-rss--dispose (app)
   "Release APP's timers and in-flight requests; the session stays reusable."

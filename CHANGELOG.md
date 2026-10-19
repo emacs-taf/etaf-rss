@@ -8,10 +8,22 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The reader opens as an ETAF application: its keys are root keys of the
+  View, so RET reaches a focused control before it opens the selected
+  article, the canvas follows the palette, and the layout follows each
+  settled resize without a reader-owned resize hook. It requires ETAF 0.3.0
+  and ETAF UI 0.2.0.
+
 - `?` and `C-c h` now open the same searchable, themed modal inside the
   reader. Its concise labels come from the effective bindings, not a static
   message. Escape exits one layer at a time; clicking outside closes help
   and restores the reader focus without splitting the window.
+
+### Removed
+
+- `etaf-rss-mode-map` is removed. The reader's keys are declared on its root
+  View; `C-c h` lists them. Keys the reader does not declare fall through to
+  your own bindings, so bind an extra command globally instead.
 
 ### Fixed
 

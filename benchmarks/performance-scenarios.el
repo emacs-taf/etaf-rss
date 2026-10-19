@@ -90,11 +90,9 @@
                (_ (list :ok (list :feeds feeds :total total
                                   :unread (- total 40) :starred 18)))))))
 
-(defun etaf-rss-benchmark--selected-title (buffer)
-  "Return BUFFER's selected row title, read from the painted canvas."
-  (with-current-buffer buffer
-    (let ((model etaf-rss--model))
-      (plist-get (etaf-rss--selected-row model) :title))))
+(defun etaf-rss-benchmark--selected-title (model)
+  "Return the title of MODEL's selected row."
+  (plist-get (etaf-rss--selected-row model) :title))
 
 (defun etaf-rss-benchmark--title-prefix (title)
   "Return the visible prefix of a list TITLE.
@@ -124,8 +122,6 @@ scripted client and leave it ready for timed samples."
          (scroll 0)
          (scope :all))
     (plist-put model :buffer buffer)
-    (with-current-buffer buffer
-      (setq-local etaf-rss--model model))
     (if (eq mode 'batch)
         (etaf-mount buffer (etaf-rss-view model) etaf-rss-benchmark--batch-canvas)
       (etaf-mount buffer (etaf-rss-view model)))
@@ -166,13 +162,13 @@ scripted client and leave it ready for timed samples."
          ('selection
           (if (etaf-rss-benchmark--painted-p
                buffer (etaf-rss-benchmark--title-prefix
-                       (etaf-rss-benchmark--selected-title buffer)))
+                       (etaf-rss-benchmark--selected-title model)))
               t
             "The selected row title is not painted"))
          ('page
           (if (etaf-rss-benchmark--painted-p
                buffer (etaf-rss-benchmark--title-prefix
-                       (etaf-rss-benchmark--selected-title buffer)))
+                       (etaf-rss-benchmark--selected-title model)))
               t
             "The paged row title is not painted"))
          ('scroll

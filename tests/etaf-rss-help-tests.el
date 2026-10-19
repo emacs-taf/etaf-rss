@@ -7,6 +7,34 @@
 (require 'cl-lib)
 (require 'etaf-rss)
 
+(ert-deftest etaf-rss-tests-root-keys-own-the-canvas ()
+  "The palette paints the canvas and `T' and `q' beat renderer bindings."
+  (save-window-excursion
+    (let* ((directory (make-temp-file "etaf-rss-keys-" t))
+           (etaf-rss-buffer-name " *RSS keys acceptance*")
+           (etaf-rss-refresh-interval nil)
+           (etaf-rss-theme-mode 'dark)
+           (model (etaf-rss-create
+                   :client (etaf-rss-make-client
+                            :data-file (expand-file-name "data.json" directory))))
+           (buffer (etaf-rss-open model))
+           (canvas (lambda ()
+                     (with-current-buffer buffer
+                       ;; The application owns the base remap; Ebox adds
+                       ;; the root's own background as a relative remap.
+                       (plist-get (car (last (alist-get 'default face-remapping-alist)))
+                                  :background)))))
+      (unwind-protect
+          (with-current-buffer buffer
+            (should-not mode-line-format)
+            (should (equal (funcall canvas) (etaf-rss-color :bg 'dark)))
+            (execute-kbd-macro (kbd "T"))
+            (should (equal (funcall canvas) (etaf-rss-color :bg 'light)))
+            (execute-kbd-macro (kbd "q"))
+            (should-not (buffer-live-p buffer)))
+        (when (buffer-live-p buffer) (kill-buffer buffer))
+        (delete-directory directory t)))))
+
 (ert-deftest etaf-rss-tests-help-stays-in-reader ()
   "Both help entries share a read-only modal and restore the reader focus."
   (save-window-excursion
