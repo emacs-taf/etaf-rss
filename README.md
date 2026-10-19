@@ -141,7 +141,7 @@ reading, search and OPML. Performance workloads live in
 `benchmarks/performance-scenarios.el` and run through the workspace driver:
 
 ```sh
-python3 ../../scripts/performance.py run --mode gui \
+python3 ../scripts/performance.py run --mode gui \
   --scenario-file benchmarks/performance-scenarios.el \
   --scenario 'etaf-rss.*' --diagnose
 ```
