@@ -90,6 +90,26 @@
   (let ((time (plist-get row :published)))
     (if time (etaf-rss-relative-time time) "")))
 
+(defun etaf-rss--viewport-columns ()
+  "Return the mounted viewport width in character columns."
+  (max 20 (floor (/ (or (car (etaf-viewport)) (* 80 (frame-char-width)))
+                    (frame-char-width)))))
+
+(defun etaf-rss--title-columns (compact)
+  "Return how many columns an article title may use in COMPACT mode.
+The row is one line: the title takes what remains after the sidebar and the
+list's share of the width, then the index, the feed name (omitted when
+compact), the time, the star and the row's own gaps and padding."
+  (let* ((columns (etaf-rss--viewport-columns))
+         (pane (if compact columns
+                 (/ (- columns (if compact
+                                   etaf-rss--sidebar-narrow-columns
+                                 etaf-rss--sidebar-columns))
+                    2))))
+    ;; 46 = row padding, index, feed, time, star, the row's gaps, and slack so
+    ;; the ellipsis lands inside the cell instead of at its clipped edge.
+    (max 12 (- pane 46))))
+
 (defun etaf-rss--row-columns (compact)
   "Return the grid columns of one article row.
 COMPACT drops the feed column, which a narrow frame cannot show."
@@ -308,7 +328,8 @@ gold star, and both states never change the text's width."
                                  (etaf-rss-color :panel3)
                                (etaf-rss-color :accent))))
     (box :height '(lh 1) :overflow 'hidden
-      (text (expr (or (plist-get row :title) ""))))
+      (text (expr (etaf-rss--clip (or (plist-get row :title) "")
+                                  (etaf-rss--title-columns compact)))))
     (box :if (not compact) :height '(lh 1) :overflow 'hidden
          :font-weight 'normal :color (etaf-rss-color :dim)
       (text (expr (or (plist-get row :feed-title) ""))))
