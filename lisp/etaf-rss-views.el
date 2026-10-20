@@ -430,7 +430,8 @@ pane never measures text: LINES is the already-wrapped slice of the article,
 so scrolling paints without reflowing.  ON-SCROLL receives -1 or 1 from a
 wheel turn over the article."
   :view
-  (flex :flex-direction 'column :width 'stretch :height 'stretch
+  (flex :ref 'etaf-rss-reader-pane
+        :flex-direction 'column :width 'stretch :height 'stretch
         :flex-grow 1 :flex-basis '(ch 0) :min-width '(ch 0)
         :padding '((lh 1) (ch 2)) :gap '((lh 0) (ch 0))
         :background-color (etaf-rss-color :panel)

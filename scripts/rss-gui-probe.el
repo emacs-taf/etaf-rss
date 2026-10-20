@@ -215,10 +215,36 @@ SIZE defaults to `RSS_GUI_SIZE' or \"150x42\".  Return the new session."
       (with-selected-window window
         (cdr (window-text-pixel-size window (point-min) (point-max) nil nil t))))))
 
+(defun etaf-rss-gui--reader-width-problems (runtime state)
+  "Return width problems of the reading pane in RUNTIME.
+Each wrapped line is a column budget; this measures the pixels it paints
+against the width the renderer committed to the pane, so a budget that
+ignores the pane's insets shows up even when the line count still fits."
+  (let ((pane (and runtime (etaf-host-ref-size runtime 'etaf-rss-reader-pane))))
+    (if (null pane)
+        (list "the reader pane reports no committed width")
+      (let ((budget (- (car pane)
+                       (etaf-string-pixel-width
+                        (make-string etaf-rss--reader-inset ?0))))
+            (problems nil))
+        (dolist (line (plist-get state :reader-lines))
+          (let* ((indent (if (eq (plist-get line :kind) 'quote)
+                             (etaf-string-pixel-width "0")
+                           0))
+                 (painted (+ indent
+                             (etaf-string-pixel-width
+                              (or (plist-get line :text) "")))))
+            (when (> painted budget)
+              (push (format "a reading line paints %dpx in a %dpx pane budget"
+                            painted budget)
+                    problems))))
+        (nreverse problems)))))
+
 (defun etaf-rss-gui-check ()
   "Return layout problems of the mounted reader, or nil when healthy.
 Checks the painted canvas against the window, the reading width against the
-wrapped lines, and the truncation slot."
+wrapped lines, the reading lines' painted pixels against the pane the
+renderer committed, the truncation slot, and a wide list's title budget."
   (let* ((window (etaf-rss-gui--window))
          (state (etaf-rss-state etaf-rss-gui--model))
          (problems nil))
@@ -229,14 +255,31 @@ wrapped lines, and the truncation slot."
         (let ((canvas (etaf-rss-gui-canvas-height))
               (body (window-body-height window t))
               (width (window-body-width window))
+              (layout (plist-get state :layout))
               (text (buffer-substring-no-properties (point-min) (point-max))))
           (when (and canvas (> canvas body))
             (push (format "canvas %dpx exceeds body %dpx" canvas body) problems))
           (when (string-match-p "\\$" text)
             (push "a truncation marker is visible" problems))
-          (when (eq (plist-get state :layout) 'wide)
+          (when (eq layout 'wide)
             (when (< width etaf-rss-wide-columns)
-              (push (format "wide layout at %d columns" width) problems))))))
+              (push (format "wide layout at %d columns" width) problems))
+            ;; A row reserves fixed columns for the source and the time; the
+            ;; title takes the rest, and eight characters is not a title.
+            (let* ((list-columns (etaf-rss--list-columns width 'wide))
+                   (title-columns (etaf-rss--title-columns list-columns)))
+              (when (< title-columns 12)
+                (push (format "a wide list at %d columns leaves titles %d columns"
+                              width title-columns)
+                      problems))))
+          ;; The wrapping budget is columns; what clips is pixels, so measure
+          ;; the painted lines against the pane the renderer actually gave us.
+          (when (or (eq layout 'wide) (eq (plist-get state :pane) 'reader))
+            (setq problems
+                  (append (etaf-rss-gui--reader-width-problems
+                           (etaf-runtime-for-buffer (window-buffer window))
+                           state)
+                          problems))))))
     (dolist (line (plist-get state :reader-lines))
       (when (> (string-width (or (plist-get line :text) ""))
                (plist-get state :reader-columns))
