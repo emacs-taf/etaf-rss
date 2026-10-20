@@ -1,12 +1,18 @@
 # ETAF RSS
 
 ETAF RSS is a complete RSS client for Emacs, rendered as one ETAF text
-application. It subscribes to RSS 2.0, Atom and JSON Feed documents, keeps
-every subscription and article in one local JSON store, browses all/unread/
-starred scopes plus per-feed and per-folder lists, reads an article as wrapped
-text, tracks read and starred state, searches titles and bodies, and imports
-and exports OPML. Refresh is conditional (ETag / Last-Modified) and runs one
-request at a time in the background.
+application. It subscribes to RSS 2.0, Atom and JSON Feed documents, browses
+all/unread/starred scopes plus per-feed and per-folder lists, reads an
+article as wrapped text, tracks read and starred state, searches titles and
+bodies, and imports and exports OPML. Refresh is conditional (ETag /
+Last-Modified) and runs one request at a time in the background.
+
+Two backends answer the same requests. The default keeps every subscription
+and article in one local JSON store; the other reads a self-hosted
+[Miniflux](https://miniflux.app) server, where the server owns subscriptions,
+articles and read state. Set `etaf-rss-backend` to `miniflux` and configure
+the server URL and API token to read your Miniflux account in the same
+interface.
 
 The reader at a wide frame:
 
@@ -49,6 +55,10 @@ At a narrow frame the scopes move into a header strip:
   with the keyboard, the mouse and the wheel.
 - Headless: a session needs no buffer, no network and no timer, and accepts a
   scripted client, so scripts and tests drive the whole reader offline.
+- Miniflux backend: `etaf-rss-backend` = `miniflux` reads a self-hosted
+  server through its REST API with the same scopes, folders, reading pane and
+  keys; subscribing, unsubscribing, filing a feed, OPML import and export and
+  every read and star write go to the server.
 
 ## Keys
 
@@ -85,8 +95,9 @@ it and restores the previous focus.
 | Emacs 29.1 or newer with libxml2 | renders the interface and parses feeds | `(featurep 'libxml-parse-xml-region)` |
 | `etaf`, `etaf-ui`, `ebox`, `ecss` | the framework; each repository's root entry must be on `load-path` | every checkout is readable |
 
-No external program and no account is required: feeds are fetched with Emacs'
-own `url-retrieve`, and the store is one JSON file.
+No external program is required for the local backend: feeds are fetched with
+Emacs' own `url-retrieve`, and the store is one JSON file. The Miniflux
+backend needs a running instance and an API token.
 
 ## Installation
 
@@ -106,6 +117,23 @@ own `url-retrieve`, and the store is one JSON file.
 press `a` to subscribe to a feed address, or `i` to import an OPML file. The
 store lives in `<user-emacs-directory>/etaf-rss/data.json`; bind
 `etaf-rss-data-file` before creating a session to keep profiles apart.
+
+## Reading a Miniflux server
+
+```elisp
+(setopt etaf-rss-backend 'miniflux
+        etaf-rss-miniflux-url "https://miniflux.example.com"
+        etaf-rss-miniflux-token "your-api-token")
+;; or keep the settings in a file instead of the init
+(setopt etaf-rss-miniflux-config-file "~/.emacs.d/etaf-miniflux.json")
+;; {"url": "https://miniflux.example.com", "token": "…"}
+```
+
+The token comes from the server's Settings > API Keys page; `MINIFLUX_URL`
+and `MINIFLUX_TOKEN` are the environment fallbacks. Nothing is copied to the
+local store: the list, the reading pane and every write go to the server.
+`(etaf-rss-create :client (etaf-rss-miniflux-client))` opens a server session
+explicitly, which is how a script can read two backends side by side.
 
 ## Quick start for an agent
 

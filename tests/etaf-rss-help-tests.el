@@ -35,6 +35,34 @@
         (when (buffer-live-p buffer) (kill-buffer buffer))
         (delete-directory directory t)))))
 
+(ert-deftest etaf-rss-tests-canvas-fills-the-window-without-overflow ()
+  "The mounted canvas never needs more rows than the window shows.
+A buffer one row taller than its window scrolls as a whole, so a wheel turn
+or a scroll command slides the sidebar and the list along with the article."
+  (save-window-excursion
+    (let* ((directory (make-temp-file "etaf-rss-canvas-" t))
+           (etaf-rss-buffer-name " *RSS canvas acceptance*")
+           (etaf-rss-refresh-interval nil)
+           (model (etaf-rss-create
+                   :client (etaf-rss-make-client
+                            :data-file (expand-file-name "data.json" directory))))
+           (buffer (etaf-rss-open model)))
+      (unwind-protect
+          (with-current-buffer buffer
+            (let ((window (get-buffer-window buffer t)))
+              (should window)
+              (should (<= (line-number-at-pos (point-max))
+                          (window-body-height window)))
+              (should (<= (cdr (etaf-runtime-viewport
+                                (etaf-runtime-for-buffer buffer)))
+                          (window-body-height window)))
+              ;; Scrolling the window is what a stray wheel gesture did; the
+              ;; page must stay pinned at its top.
+              (should (window-start window))
+              (should (= (window-start window) (point-min)))))
+        (when (buffer-live-p buffer) (kill-buffer buffer))
+        (delete-directory directory t)))))
+
 (ert-deftest etaf-rss-tests-help-stays-in-reader ()
   "Both help entries share a read-only modal and restore the reader focus."
   (save-window-excursion

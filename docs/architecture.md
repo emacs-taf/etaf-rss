@@ -22,6 +22,7 @@ lisp/
   etaf-rss-parse.el    feed/OPML parsing, HTML to blocks, wrapping (pure)
   etaf-rss-store.el    JSON persistence, schema normalization, retention
   etaf-rss-service.el  the store owner: fetch, merge, scopes, OPML (client)
+  etaf-rss-miniflux.el a second backend: the same requests over a REST API
   etaf-rss-model.el    one session: reactive state and user actions
   etaf-rss-views.el    internal Components: plain values in, callbacks out
   etaf-rss-app.el      the application Component, keymap, open/close
@@ -46,6 +47,11 @@ keys / mouse ─→ app commands ─→ model actions ─→ service client
   store file. It answers plist requests asynchronously and keeps its answers
   in the session, not in the view. Local queries answer from an event-loop
   timer; fetches answer from their transfer callback, one at a time.
+  A client is the local struct, a function of (REQUEST CALLBACK), or a plist
+  `(:call FUNCTION [:cancel FUNCTION])`; `etaf-rss-miniflux.el` is the last
+  kind and answers the same request protocol from a server's REST API, so
+  every layer above the client is backend-agnostic and the Miniflux sessions
+  are tested with a transport function instead of the network.
 - The **model** owns a plist of `etaf-ref` sources plus the follow/refresh/
   read timers. It never talks to the file or the network directly, and every
   reply is guarded by a generation counter so a superseded scope, search or

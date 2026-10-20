@@ -16,6 +16,11 @@
       "purpose": "The opened reader paints its canvas with the palette, and its root keys switch the theme and close the reader instead of renderer scrolling."
     },
     {
+      "name": "etaf-rss-tests-canvas-fills-the-window-without-overflow",
+      "file": "tests/etaf-rss-help-tests.el",
+      "purpose": "The mounted reader canvas never exceeds its window rows, so no scroll of the window can slide the sidebar and the list together with the article."
+    },
+    {
       "name": "etaf-rss-tests-help-stays-in-reader",
       "file": "tests/etaf-rss-help-tests.el",
       "purpose": "Both help keys show labelled effective bindings in the existing reader, search treats ? as text, Escape exits one layer at a time, and backdrop dismissal restores focus without changing the scope."
@@ -104,6 +109,26 @@
       "name": "etaf-rss-tests-theme-switches",
       "file": "tests/etaf-rss-tests.el",
       "purpose": "The palette cycles and sets between dark and light, an unknown appearance signals, and the UI tokens match the palette."
+    },
+    {
+      "name": "etaf-rss-tests-miniflux-backend-reads-a-server",
+      "file": "tests/etaf-rss-miniflux-tests.el",
+      "purpose": "The Miniflux backend answers the reader's own request protocol, so a server's categories, counters, feeds and entries fill the same sidebar and list."
+    },
+    {
+      "name": "etaf-rss-tests-miniflux-backend-opens-an-article",
+      "file": "tests/etaf-rss-miniflux-tests.el",
+      "purpose": "Opening an article on the server backend requests the entry by id and renders its HTML in the reading pane."
+    },
+    {
+      "name": "etaf-rss-tests-miniflux-backend-writes-read-and-star",
+      "file": "tests/etaf-rss-miniflux-tests.el",
+      "purpose": "Read state, stars and mark-all-read reach the server endpoints and update the reader rows and counters from the replies."
+    },
+    {
+      "name": "etaf-rss-tests-miniflux-backend-reports-a-server-failure",
+      "file": "tests/etaf-rss-miniflux-tests.el",
+      "purpose": "A rejected server request becomes the reader's readable error while the session stays usable."
     }
   ]
 }

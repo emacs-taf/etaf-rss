@@ -109,10 +109,38 @@ refresh only on request.
 | `etaf-rss-follow-delay` | 0.45 | seconds before the pane follows the selection |
 | `etaf-rss-mark-read-delay` | 1.0 | seconds before an open article is marked read |
 | `etaf-rss-refresh-interval` | 900 | seconds between automatic refreshes, or `nil` |
+| `etaf-rss-backend` | `local` | `local` store or `miniflux` server |
+| `etaf-rss-miniflux-url` | from config file | Miniflux base URL |
+| `etaf-rss-miniflux-token` | from config file | Miniflux API token |
+| `etaf-rss-miniflux-config-file` | `<user-emacs-directory>/etaf-miniflux.json` | `{"url": …, "token": …}` |
+| `etaf-rss-miniflux-request-timeout` | 20 | seconds before one server request is abandoned |
+| `etaf-rss-miniflux-list-limit` | 200 | most entries one scope loads from the server |
 
 The palette, the reading width and the store are per session: rebind the
 variables before `etaf-rss-create`, or use several sessions for several
 profiles.
+
+## Reading a Miniflux server
+
+The `miniflux` backend answers the same requests as the local store, so the
+list, the reading pane, the keys and the scopes are unchanged: the server owns
+subscriptions, articles and read state instead of the JSON file.
+
+```elisp
+(setopt etaf-rss-backend 'miniflux
+        etaf-rss-miniflux-url "https://miniflux.example.com"
+        etaf-rss-miniflux-token "…")      ; Settings > API Keys on the server
+(etaf-rss-open)
+```
+
+`etaf-rss-miniflux-config-file` keeps the URL and token in a JSON file
+(`{"url": "…", "token": "…"}`); `MINIFLUX_URL` and `MINIFLUX_TOKEN` are the
+environment fallbacks.  `(etaf-rss-create :client (etaf-rss-miniflux-client))`
+opens a server session explicitly, so one Emacs can read the local store and
+a server side by side.  Folders are the server's categories: filing a feed
+creates the category when it does not exist yet.  Subscribing, OPML import and
+export, and every read and star write go to the API; nothing is copied into
+the local store.
 
 ## Failure and recovery
 
@@ -124,5 +152,8 @@ profiles.
   overwritten.
 - A request that exceeds `etaf-rss-request-timeout` is abandoned and reported;
   the reader never waits on one feed.
+- A rejected server request (an invalid token, a missing instance) becomes
+  the reader's status-line error with the server's own message; the session
+  stays usable, so correcting the configuration is enough.
 - Closing the buffer cancels the refresh timer and abandons in-flight
   requests, writing pending changes to the store first.

@@ -2,7 +2,7 @@
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 ;; Author: ETAF contributors
-;; Version: 0.2.0
+;; Version: 0.3.0
 ;; Package-Requires: ((emacs "29.1") (etaf "0.3.0") (etaf-ui "0.2.0"))
 ;; Keywords: news, hypermedia, ui
 ;; URL: https://github.com/emacs-taf/etaf-rss
@@ -20,6 +20,12 @@
 ;; article's HTML as wrapped text, marks read state, stars, searches titles
 ;; and bodies, and imports and exports OPML.  Feeds refresh conditionally
 ;; (ETag / Last-Modified), one request at a time, in the background.
+;;
+;; Two backends answer the same requests: the local JSON store described
+;; above, and a self-hosted Miniflux server (`etaf-rss-miniflux-client'),
+;; where the server owns subscriptions, articles and read state.  Set
+;; `etaf-rss-backend' to `miniflux' to read a server; the interface, the
+;; layout and the keys are the same.
 ;;
 ;; A session is the unit of state.  `etaf-rss-create' builds one, the actions
 ;; below drive it asynchronously, `etaf-rss-state' reports it as plain data,
@@ -337,6 +343,44 @@
 ;; Abandon CLIENT's queued and in-flight requests and persist its store.
 ;; Cancelled requests never run their callbacks, and the same client can be
 ;; used again afterwards.  Return the number of abandoned transfers.
+;;
+;; Function: etaf-rss-miniflux-client (&key url token timeout transport)
+;; Create a client that reads a self-hosted Miniflux server.
+;; It answers the same request protocol as the local store, so the reader's
+;; model and views are identical on both backends; subscriptions, articles
+;; and read state live on the server.  URL, TOKEN and TIMEOUT default to
+;; `etaf-rss-miniflux-url', `etaf-rss-miniflux-token' and
+;; `etaf-rss-miniflux-request-timeout'.  TRANSPORT, a function of (METHOD PATH
+;; QUERY BODY CALLBACK), replaces the HTTP transfer, which is how tests drive
+;; the backend without a server.  Pass the client to `etaf-rss-create :client'
+;; or set `etaf-rss-backend' to `miniflux'.
+;;
+;; Variable: etaf-rss-backend
+;; Backend new sessions read: `local' (default) or `miniflux'.
+;; `local' keeps everything in `etaf-rss-data-file'; `miniflux' reads the
+;; server configured by `etaf-rss-miniflux-url' and `etaf-rss-miniflux-token'.
+;; Both show the same reader, and `etaf-rss-create :client' still overrides it.
+;;
+;; Variable: etaf-rss-miniflux-url
+;; Base URL of the Miniflux instance used by the `miniflux' backend.
+;; Nil consults `etaf-rss-miniflux-config-file', then the MINIFLUX_URL
+;; environment variable, then a server on the default local port.
+;;
+;; Variable: etaf-rss-miniflux-token
+;; API token for the Miniflux instance used by the `miniflux' backend.
+;; Nil consults `etaf-rss-miniflux-config-file', then MINIFLUX_TOKEN.  The
+;; token comes from the server's Settings > API Keys page.
+;;
+;; Variable: etaf-rss-miniflux-config-file
+;; JSON file holding the Miniflux URL and token.
+;; It reads {"url": "…", "token": "…"} and defaults to
+;; `<user-emacs-directory>/etaf-miniflux.json'.
+;;
+;; Variable: etaf-rss-miniflux-request-timeout
+;; Seconds before one Miniflux request is abandoned, default 20.
+;;
+;; Variable: etaf-rss-miniflux-list-limit
+;; Most entries one scope loads from the server in one request, default 200.
 ;;
 ;; Variable: etaf-rss-buffer-name
 ;; Buffer `etaf-rss-open' mounts the reader into.

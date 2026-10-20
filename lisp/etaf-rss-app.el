@@ -41,8 +41,6 @@
                        ("C-p" etaf-rss--previous-row "上一篇文章")
                        ("n" etaf-rss--next-unread "下一篇未读")
                        ("p" etaf-rss--previous-unread "上一篇未读")
-                       ("<wheel-up>" etaf-rss--wheel-up "向上滚动")
-                       ("<wheel-down>" etaf-rss--wheel-down "向下滚动")
                        ("<home>" etaf-rss--first-row "第一篇文章")
                        ("<end>" etaf-rss--last-row "最后一篇文章")
                        ("<next>" etaf-rss--next-page "列表下一页")
@@ -299,42 +297,24 @@ key."
     (etaf-rss-refresh-feeds model (list :kind :all))
     (etaf-rss--note model "正在刷新全部订阅…")))
 
-(defun etaf-rss--wheel (event delta)
-  "Scroll the reading pane or move the article selection by DELTA at EVENT."
-  (let* ((position (event-start event))
-         (window (posn-window position)))
-    (when (window-live-p window)
-      (with-current-buffer (window-buffer window)
-        (let* ((model (etaf-rss--current-model))
-               (pixels (posn-x-y position))
-               (xy (and (consp pixels)
-                        (cons (/ (float (car pixels)) (window-font-width window))
-                              (/ (float (cdr pixels)) (window-font-height window))))))
-          (if (and (null (posn-area position))
-                   (etaf-rss--reader-hit-p
-                    xy (window-body-width window)
-                    (etaf-rss--read model :layout)))
-              (etaf-rss-scroll-reader model delta)
-            (etaf-rss-move-selection model delta)))))))
+(defun etaf-rss--wheel-command (delta)
+  "Scroll the reading pane by DELTA from a wheel turn off the panes.
+The panes bind their own wheel keys, which the renderer resolves from the
+Host under the pointer, so this command only runs over the chrome: the
+header, the compact tabs and the status bar keep the article under the
+pointer's gesture."
+  (let ((model (ignore-errors (etaf-rss--current-model))))
+    (when model (etaf-rss-scroll-reader model delta))))
 
-(defun etaf-rss--reader-hit-p (xy columns layout)
-  "Return non-nil when text-cell position XY hits the reading pane.
-COLUMNS is the body width of the event window and LAYOUT its layout."
-  (and (consp xy) (numberp (car xy)) (numberp (cdr xy))
-       (if (eq layout 'wide)
-           (> (car xy) (+ etaf-rss--sidebar-columns
-                          (etaf-rss--list-columns columns layout)))
-         t)))
+(defun etaf-rss--wheel-up ()
+  "Scroll the article up from a wheel turn over the reader's chrome."
+  (interactive)
+  (etaf-rss--wheel-command -1))
 
-(defun etaf-rss--wheel-up (event)
-  "Scroll the article or select the previous row at EVENT."
-  (interactive "e")
-  (etaf-rss--wheel event -1))
-
-(defun etaf-rss--wheel-down (event)
-  "Scroll the article or select the next row at EVENT."
-  (interactive "e")
-  (etaf-rss--wheel event 1))
+(defun etaf-rss--wheel-down ()
+  "Scroll the article down from a wheel turn over the reader's chrome."
+  (interactive)
+  (etaf-rss--wheel-command 1))
 
 (defun etaf-rss--cycle-theme ()
   "Switch the reader to the other palette."
@@ -370,7 +350,7 @@ change never re-renders it."
    :on-add on-add :on-import on-import :on-export on-export))
 
 (etaf-define-component etaf-rss--app-header
-    (&key session on-search on-refresh on-add on-locate)
+    (&key session on-search on-refresh on-add on-locate on-scroll)
   "Render the content header and the narrow layout's scope chips."
   :view
   (flex :flex-direction 'column :width 'stretch :flex-shrink 0
@@ -383,6 +363,7 @@ change never re-renders it."
      :sources (when (eq (etaf-rss--read session :layout) 'narrow)
                 (etaf-rss--source-menu session))
      :on-locate on-locate
+     :on-scroll on-scroll
      :on-search on-search :on-refresh on-refresh :on-add on-add)
     (box :if (eq (etaf-rss--read session :layout) 'narrow) :height '(lh 1))
     (etaf-rss--view-chips
@@ -390,10 +371,12 @@ change never re-renders it."
      :smart (nth 0 (etaf-rss--sidebar session))
      :on-locate on-locate)))
 
-(etaf-define-component etaf-rss--app-list (&key session on-press)
+(etaf-define-component etaf-rss--app-list (&key session on-press on-scroll)
   "Render the article list for SESSION.
 Only writes to the list state (selection, rows, loading) re-render this
-child; the keyed rows keep their instances, so a move touches two rows."
+child; the keyed rows keep their instances, so a move touches two rows.
+ON-SCROLL receives a wheel delta; the pane owns its wheel, so a turn over
+the list selects rows instead of scrolling the article."
   :view
   (etaf-rss--view-list
    :entries (etaf-rss--view-entries session)
@@ -404,12 +387,12 @@ child; the keyed rows keep their instances, so a move touches two rows."
    :loading (etaf-rss--read session :loading)
    :refreshing (etaf-rss--read session :refreshing)
    :empty-note (etaf-rss--empty-note session)
-   :on-press on-press))
+   :on-press on-press :on-scroll on-scroll))
 
-(etaf-define-component etaf-rss--app-reader (&key session)
+(etaf-define-component etaf-rss--app-reader (&key session on-scroll)
   "Render the reading pane for SESSION.
 It re-renders when the open article, its lines or its scroll change, never
-when the list selection does."
+when the list selection does.  ON-SCROLL receives a wheel delta."
   :view
   (etaf-rss--view-reader
    :title (etaf-rss--read session :reader-title)
@@ -420,9 +403,10 @@ when the list selection does."
    :starred (etaf-rss--read session :reader-starred)
    :scroll (etaf-rss--read session :reader-scroll)
    :total (length (etaf-rss--read session :reader-lines))
+   :on-scroll on-scroll
    :empty-note "选择左边的文章开始阅读"))
 
-(etaf-define-component etaf-rss--app-footer (&key session)
+(etaf-define-component etaf-rss--app-footer (&key session on-scroll)
   "Render the status bar of SESSION."
   :view
   (etaf-rss--view-footer
@@ -432,6 +416,7 @@ when the list selection does."
    :refreshing (etaf-rss--read session :refreshing)
    :done (etaf-rss--read session :refresh-done)
    :total (etaf-rss--read session :refresh-total)
+   :on-scroll on-scroll
    :compact (etaf-rss--compact-layout-p session)
    :hint (if (etaf-rss--compact-layout-p session)
              "方向键 · RET · g · ?"
@@ -462,6 +447,10 @@ interaction repaints the smallest subtree that changed."
              (on-import (lambda () (etaf-rss--import-in session)))
              (on-export (lambda () (etaf-rss--export-in session)))
              (on-press (lambda (index) (etaf-rss-press-row session index)))
+             ;; Each pane owns its wheel: a turn over the list selects rows
+             ;; and a turn over the article scrolls it, in every layout.
+             (list-scroll (lambda (delta) (etaf-rss-move-selection session delta)))
+             (article-scroll (lambda (delta) (etaf-rss-scroll-reader session delta)))
              (on-pane (lambda (target) (etaf-rss-show-pane session target))))
   :setup
   (progn
@@ -476,7 +465,19 @@ interaction repaints the smallest subtree that changed."
        (unless etaf-rss--remounting
          (etaf-rss--dispose session)))))
   :view
-  (flex :flex-direction 'column :width '(vw 100) :height '(vh 100)
+  (flex :flex-direction 'column :width '(vw 100)
+        ;; The canvas is exactly the display window's body, taken from the
+        ;; fit that ran before the mount.  `vh 100' would use the renderer's
+        ;; own viewport, which still counts the mode line row this application
+        ;; hid, and one extra row is enough for the whole page to scroll.
+        :height (list 'lh (max 8 (etaf-rss--read session :window-rows)))
+        ;; The canvas is exactly one viewport: no child may grow the buffer
+        ;; past the window, because a taller buffer scrolls as a whole and
+        ;; would carry the sidebar and the list with the article.
+        :overflow 'hidden
+        ;; The border box is the viewport: padding must not add rows beyond
+        ;; the window, or the whole canvas scrolls with the article.
+        :box-sizing 'border-box
         :padding-top '(lh 1) :padding-bottom '(lh 1)
         :on-direction #'etaf-rss--direction
         :aria-label "RSS 阅读器"
@@ -504,18 +505,20 @@ interaction repaints the smallest subtree that changed."
         (etaf-rss--app-header
          :session session
          :on-search on-search :on-refresh on-refresh :on-add on-add
-         :on-locate on-select-source)
-        (etaf-rss--app-list :session session :on-press on-press))
+         :on-locate on-select-source :on-scroll article-scroll)
+        (etaf-rss--app-list :session session :on-press on-press
+                            :on-scroll list-scroll))
       (etaf-rss--app-reader
        :if (or (not (etaf-rss--compact-layout-p session))
                (eq (etaf-rss--read session :pane) 'reader))
-       :session session))
+       :session session :on-scroll article-scroll))
     (etaf-rss--view-tabs
      :if (etaf-rss--compact-layout-p session)
      :pane (etaf-rss--read session :pane)
      :layout (etaf-rss--read session :layout)
-     :on-pane on-pane)
-    (etaf-rss--app-footer :session session)))
+     :on-pane on-pane
+     :on-scroll article-scroll)
+    (etaf-rss--app-footer :session session :on-scroll article-scroll)))
 
 (defun etaf-rss--source-menu (session)
   "Return SESSION's source chooser: the fixed scopes, folders and feeds.

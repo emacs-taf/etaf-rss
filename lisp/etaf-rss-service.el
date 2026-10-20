@@ -17,6 +17,12 @@
 ;; transport by binding `etaf-rss-client-factory' to a function that returns a
 ;; two-argument client, so no scenario needs the network.
 ;;
+;; A client is one of: the local client from `etaf-rss-make-client', a
+;; function of (REQUEST CALLBACK), or a plist (:call FUNCTION [:cancel
+;; FUNCTION]) for a backend that owns requests of its own.  Only the local
+;; client keeps a store; `etaf-rss-miniflux-client' is such a plist client and
+;; speaks a server's API instead.
+;;
 ;; Operations:
 ;;
 ;;   (:op :snapshot)                       feeds, totals and preferences
@@ -120,22 +126,28 @@ so constructing a client touches no disk."
 
 (defun etaf-rss-client-call (client request callback)
   "Send REQUEST through CLIENT and deliver the reply to CALLBACK.
-CLIENT is a client from `etaf-rss-make-client' or a function of two arguments
-(REQUEST CALLBACK), which is how tests inject a scripted client.
+CLIENT is a client from `etaf-rss-make-client', a function of two arguments
+(REQUEST CALLBACK), or a plist (:call FUNCTION [:cancel FUNCTION]); the last
+two are how another backend or a test drives the same reader.
 
 CALLBACK receives exactly one of (:ok DATA) or (:error MESSAGE :hint HINT).
 Local queries and mutations answer from a timer and network fetches from the
 transfer callback, so the call never blocks the caller."
-  (if (etaf-rss--client-p client)
-      (etaf-rss--client-dispatch client request callback)
-    (if (functionp client)
-        (funcall client request callback)
-      (signal 'etaf-rss-error (list (format "Not a backend client: %S" client))))))
+  (let ((call (cond ((etaf-rss--client-p client) nil)
+                    ((functionp client) client)
+                    ((consp client) (plist-get client :call))
+                    (t nil))))
+    (cond ((etaf-rss--client-p client)
+           (etaf-rss--client-dispatch client request callback))
+          ((functionp call) (funcall call request callback))
+          (t (signal 'etaf-rss-error (list (format "Not a backend client: %S" client)))))))
 
 (defun etaf-rss-cancel (client)
   "Abandon CLIENT's queued and in-flight requests and persist its store.
 Cancelled requests never run their callbacks, and a session can keep using
 the same client afterwards.  Return the number of abandoned transfers."
+  (when-let* ((cancel (and (consp client) (plist-get client :cancel))))
+    (funcall cancel))
   (let ((count 0))
     (when (etaf-rss--client-p client)
       (etaf-rss--client-save client)

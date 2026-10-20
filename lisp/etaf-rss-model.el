@@ -27,6 +27,8 @@
 (require 'etaf-rss-parse)
 (require 'etaf-rss-service)
 (require 'etaf-rss-store)
+(require 'etaf-rss-miniflux)
+
 
 ;;; ---------------------------------------------------------------------------
 ;;; Geometry and timing
@@ -104,16 +106,39 @@ nil to refresh only on request."
 ;;; Construction
 ;;; ---------------------------------------------------------------------------
 
+(defcustom etaf-rss-backend 'local
+  "Backend a new session reads: `local' or `miniflux'.
+`local' keeps subscriptions, articles and reading state in
+`etaf-rss-data-file'.  `miniflux' reads a self-hosted Miniflux server through
+`etaf-rss-miniflux-client', configured by `etaf-rss-miniflux-url' and
+`etaf-rss-miniflux-token'.  Both backends show the same reader."
+  :type '(choice (const :tag "Local JSON store" local)
+                 (const :tag "Miniflux server" miniflux))
+  :group 'etaf-rss)
+
+;;; ---------------------------------------------------------------------------
+;;; Construction
+;;; ---------------------------------------------------------------------------
+
 (cl-defun etaf-rss-create (&key client)
   "Create an RSS reader session that talks to CLIENT.
 CLIENT defaults to `etaf-rss-client-factory' when that is bound and otherwise
-to `etaf-rss-make-client'; a scripted client keeps a whole session offline.
+to the backend named by `etaf-rss-backend'.  It may also be a backend symbol
+(`local' or `miniflux') or a client from `etaf-rss-miniflux-client'; any
+client keeps a whole session offline when it is scripted.
 The session owns no buffer and no timer before it is mounted, so it is also a
 complete headless reader for scripts and tests."
-  (let* ((client (or client
-                     (if etaf-rss-client-factory
-                         (funcall etaf-rss-client-factory)
-                       (etaf-rss-make-client)))))
+  (let* ((client (cond ((consp client) client)
+                       ((functionp client) client)
+                       ((memq client '(local miniflux)) client)
+                       (client)
+                       (etaf-rss-client-factory
+                        (funcall etaf-rss-client-factory))
+                       (t etaf-rss-backend)))
+         (client (pcase client
+                   ('local (etaf-rss-make-client))
+                   ('miniflux (etaf-rss-miniflux-client))
+                   (_ client))))
     (list :client client
           :buffer nil
           :disposed nil
@@ -219,6 +244,54 @@ nothing reaches the caller of a reader action."
 (defun etaf-rss--note (app text)
   "Show TEXT as APP's status line message."
   (etaf-rss--write app :message text))
+
+(defun etaf-rss--fit-now (app)
+  "Publish APP and trim its panes to the window, when it is displayed.
+Every action that changes which chrome the reader paints ends here, so the
+canvas fits again as soon as the reading pane gains its title, meta line or
+article, not only when the window resizes."
+  (when-let* ((buffer (plist-get app :buffer))
+              (runtime (and (buffer-live-p buffer)
+                            (etaf-runtime-for-buffer buffer)))
+              (window (and (buffer-live-p buffer)
+                           (get-buffer-window buffer t))))
+    (etaf-runtime-flush runtime)
+    (etaf-rss--fit-height app window)))
+
+(defun etaf-rss--fit-height (app window)
+  "Paint APP inside WINDOW's body rows.
+The row budgets above the panes are constants, so a layout change or a
+text-scale change can leave the painted canvas a row taller than the window;
+a buffer taller than its window scrolls as a whole, which would carry the
+sidebar and the list along with the article.  The fit measures the painted
+canvas and shrinks both panes by the excess rows, at most twice."
+  (when (and (window-live-p window)
+             (buffer-live-p (plist-get app :buffer))
+             (eq (window-buffer window) (plist-get app :buffer)))
+    (let ((row (max 1 (frame-char-height (window-frame window))))
+          (attempts 0))
+      (while (< attempts 2)
+        (setq attempts (1+ attempts))
+        (let* ((body (window-body-height window t))
+               (painted (with-selected-window window
+                          (cdr (window-text-pixel-size window (point-min)
+                                                       (point-max) nil (1+ body))))))
+          (if (<= painted body)
+              (setq attempts 2)
+            (let ((excess (max 1 (ceiling (- painted body) (float row)))))
+              (etaf-batch
+                ;; The shell is pinned to `:window-rows', so the excess is
+                ;; trimmed there too; otherwise the panes shrink inside a
+                ;; canvas that is still a row taller than the window.
+                (etaf-rss--write app :window-rows
+                                 (max 8 (- (etaf-rss--read app :window-rows) excess)))
+                (etaf-rss--write app :page-size
+                                 (max 1 (- (etaf-rss--read app :page-size) excess)))
+                (etaf-rss--write app :reader-rows
+                                 (max 3 (- (etaf-rss--read app :reader-rows) excess)))
+                (etaf-rss--clamp-position app))
+              (when-let* ((runtime (etaf-runtime-for-buffer (plist-get app :buffer))))
+                (etaf-runtime-flush runtime)))))))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Scopes
@@ -406,7 +479,8 @@ event loop turn, so switching scopes never blocks a key press."
     (etaf-rss--write app :reader-scroll 0)
     (when (etaf-rss--compact-layout-p app)
       (etaf-rss--write app :pane 'list)))
-  (etaf-rss--load-rows app))
+  (etaf-rss--load-rows app)
+  (etaf-rss--fit-now app))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Public navigation
@@ -511,6 +585,7 @@ stay visible.  An unknown PANE signals `etaf-rss-error'."
   (etaf-rss--write app :pane pane)
   (when (eq pane 'reader)
     (etaf-rss--schedule-reader app))
+  (etaf-rss--fit-now app)
   pane)
 
 (defun etaf-rss-toggle-pane (app)
@@ -643,7 +718,10 @@ result, which is what keeps a key press independent of the article's length."
       (etaf-rss--write app :reader-wrapped columns)
       (etaf-rss--write app :reader-lines
                        (etaf-rss-wrap-blocks blocks columns))
-      (etaf-rss--write app :reader-scroll 0))))
+      (etaf-rss--write app :reader-scroll 0))
+    ;; The pane grew by its title, meta line and article rows; fit it again
+    ;; so the reading pane can never push the canvas past the window.
+    (etaf-rss--fit-now app)))
 
 (defun etaf-rss--reader-total (app)
   "Return the line count of APP's open article."
@@ -1077,7 +1155,9 @@ column, so a wrapped line never clips."
          (chrome (pcase layout
                    ('wide 7)
                    ('medium 11)
-                   (_ 11))))
+                   ;; The narrow layout also paints the scope chips under the
+                   ;; header, one row more than the medium layout.
+                   (_ 12))))
     (max 1 (- height chrome))))
 
 (defun etaf-rss--reader-rows-for (window layout)
@@ -1123,6 +1203,19 @@ resize."
         (etaf-batch
           (etaf-rss--write app :reader-wrapped reader-columns)
           (etaf-rss--write app :reader-lines (etaf-rss-wrap-blocks blocks reader-columns)))))
+    ;; Publish the new geometry before measuring it: the canvas is judged by
+    ;; what is painted, not by the constants that asked for it.
+    (when-let* ((runtime (and (buffer-live-p buffer)
+                              (etaf-runtime-for-buffer buffer))))
+      (etaf-runtime-flush runtime))
+    (etaf-rss--fit-height app window)
+    ;; The paint the fit just triggered may still change the pane height, so
+    ;; measure once more after the pending work publishes.
+    (etaf-next-tick
+     (lambda ()
+       (when (and (buffer-live-p (plist-get app :buffer))
+                  (window-live-p window))
+         (etaf-rss--fit-height app window))))
     layout))
 
 ;;; ---------------------------------------------------------------------------

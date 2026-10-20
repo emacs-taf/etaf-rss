@@ -205,6 +205,14 @@ folder's feeds follow as ordinary entries."
         :error (plist-get feed :error)
         :on-press (lambda () (funcall on-locate (plist-get feed :id)))))))
 
+(defun etaf-rss--wheel-keys (on-scroll)
+  "Return the wheel key entries that call ON-SCROLL with -1 and 1.
+The reader's chrome carries them so a wheel turn over a header row, a tab or
+the status bar still scrolls the article, while the panes declare their own
+gesture and the subscription list keeps its native scrolling."
+  (list (list "<wheel-up>" (lambda () (funcall on-scroll -1)) "阅读上一页")
+        (list "<wheel-down>" (lambda () (funcall on-scroll 1)) "阅读下一页")))
+
 (etaf-define-component etaf-rss--view-sidebar
     (&key smart folders compact on-locate on-toggle on-add on-import on-export)
   "Render the subscription sidebar.
@@ -241,7 +249,9 @@ import and export one press away on every layout."
     (box :height '(lh 1) :border-bottom (etaf-rss--border 'bottom (etaf-rss-color :line-soft)))
     (box :height '(lh 1))
     (flex :flex-direction 'column :flex-grow 1 :flex-basis 'auto :min-height '(lh 0)
-          :gap '((lh 0) (ch 0)) :overflow 'hidden
+          :gap '((lh 0) (ch 0)) :overflow 'scroll
+          :id 'etaf-rss-sidebar-feeds
+          :aria-label "订阅源"
       (flex :flex-direction 'column :width 'stretch :gap '((lh 0) (ch 0))
         (etaf-rss--view-folder :for (folder folders)
                                :key (or (plist-get folder :name) "top")
@@ -284,13 +294,14 @@ from the header's source menu, which scales to any number of them."
 
 (etaf-define-component etaf-rss--view-header
     (&key title subtitle refreshing loading sources on-locate
-          on-search on-refresh on-add)
+          on-search on-refresh on-add on-scroll)
   "Render the content header for TITLE with its actions.
 The right edge keeps search, refresh and subscribe one press away on every
 layout; the subtitle carries the counts of the current scope."
   :view
   (flex :width 'stretch :height '(lh 2) :gap '((lh 0) (ch 1))
         :align-items 'center :flex-shrink 0
+        :keys (when on-scroll (etaf-rss--wheel-keys on-scroll))
     (column :flex-grow 1 :flex-basis '(ch 0) :min-width '(ch 0) :item-gap '(lh 0)
       (box :height '(lh 1) :overflow 'hidden :font-weight 'bold
         (text (expr (or title ""))))
@@ -340,14 +351,19 @@ gold star, and both states never change the text's width."
       (etaf-ui-icon :if (plist-get row :starred) :name 'star-filled :set etaf-rss--icon-set :size 0.75 :min-width 2 :color (etaf-rss-color :gold)))))
 
 (etaf-define-component etaf-rss--view-list
-    (&key entries start total loaded compact loading refreshing empty-note on-press)
+    (&key entries start total loaded compact loading refreshing empty-note on-press on-scroll)
   "Render APP's visible article ENTRIES with a range footer.
 START is the 1-based index of the first entry, TOTAL the scope's total and
 LOADED the number of rows loaded.  The list keeps its height while a load or
-refresh is pending, so the footer never jumps."
+refresh is pending, so the footer never jumps.  ON-SCROLL receives -1 or 1
+from a wheel turn over the list: the pane owns its wheel, so turning it over
+the list never scrolls the article."
   :view
   (flex :flex-direction 'column :width 'stretch :flex-grow 1 :flex-basis 'auto
         :min-height '(lh 0) :gap '((lh 0) (ch 0))
+        :keys (when on-scroll
+                (list (list "<wheel-up>" (lambda () (funcall on-scroll -1)) "上一篇文章")
+                      (list "<wheel-down>" (lambda () (funcall on-scroll 1)) "下一篇文章")))
     (column :for (entry entries) :key (plist-get entry :index)
             :width 'stretch :item-gap '(lh 0) :flex-shrink 0
       (etaf-rss--view-row
@@ -409,17 +425,21 @@ five times for every painted row."
        (text (expr (or (plist-get line :text) "")))))))
 
 (etaf-define-component etaf-rss--view-reader
-    (&key title meta lines loading error starred scroll total empty-note)
+    (&key title meta lines loading error starred scroll total empty-note on-scroll)
   "Render the open article: TITLE, META and the visible LINES.
 LOADING shows a skeleton, ERROR its message and an empty state its note.  The
 pane never measures text: LINES is the already-wrapped slice of the article,
-so scrolling paints without reflowing."
+so scrolling paints without reflowing.  ON-SCROLL receives -1 or 1 from a
+wheel turn over the article."
   :view
   (flex :flex-direction 'column :width 'stretch :height 'stretch
         :flex-grow 1 :flex-basis '(ch 0) :min-width '(ch 0)
         :padding '((lh 1) (ch 2)) :gap '((lh 0) (ch 0))
         :background-color (etaf-rss-color :panel)
         :border-left (etaf-rss--border 'left (etaf-rss-color :line))
+        :keys (when on-scroll
+                (list (list "<wheel-up>" (lambda () (funcall on-scroll -1)) "阅读上一页")
+                      (list "<wheel-down>" (lambda () (funcall on-scroll 1)) "阅读下一页")))
     (box :if loading :width 'stretch :height '(lh 8)
       (etaf-skeleton :width 'stretch :height '(lh 8)))
     (box :if (and (not loading) error) :width 'stretch :height '(lh 2)
@@ -451,13 +471,14 @@ so scrolling paints without reflowing."
         (etaf-rss--view-line :for (line lines) :key (plist-get line :key)
           :line line)))))
 
-(etaf-define-component etaf-rss--view-tabs (&key pane on-pane layout)
+(etaf-define-component etaf-rss--view-tabs (&key pane on-pane layout on-scroll)
   "Render the list/reading switch a compact layout uses.
 The switch itself is the shared Tabs control; this Component only places it
 with the reader's binding hint."
   :view
   (flex :width 'stretch :height '(lh 2) :gap '((lh 0) (ch 2))
         :flex-shrink 0 :align-items 'center :padding '((lh 0) (ch 2))
+        :keys (when on-scroll (etaf-rss--wheel-keys on-scroll))
         :background-color (etaf-rss-color :panel)
         :border-top (etaf-rss--border 'top (etaf-rss-color :line))
     (box :width '(ch 16)
@@ -473,13 +494,14 @@ with the reader's binding hint."
                      "方向键选择 · RET 阅读 · v 切换"))))))
 
 (etaf-define-component etaf-rss--view-footer
-    (&key message error summary hint refreshing done total compact)
+    (&key message error summary hint refreshing done total compact on-scroll)
   "Render the status bar with MESSAGE, SUMMARY and the refresh progress.
 A failure is painted in the danger color; HINT is the binding summary at the
 right edge, and COMPACT shortens what shares the line."
   :view
   (flex :width 'stretch :height '(lh 1) :gap '((lh 0) (ch 2))
         :align-items 'center :padding '((lh 0) (ch 2)) :flex-shrink 0
+        :keys (when on-scroll (etaf-rss--wheel-keys on-scroll))
         :background-color (etaf-rss-color :panel)
         :border-top (etaf-rss--border 'top (etaf-rss-color :line))
     (box :flex-grow 1 :flex-basis '(ch 0) :min-width '(ch 0)
