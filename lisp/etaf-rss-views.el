@@ -248,7 +248,10 @@ import and export one press away on every layout."
         :on-press (lambda () (funcall on-locate (plist-get item :key)))))
     (box :height '(lh 1) :border-bottom (etaf-rss--border 'bottom (etaf-rss-color :line-soft)))
     (box :height '(lh 1))
-    (flex :flex-direction 'column :flex-grow 1 :flex-basis 'auto :min-height '(lh 0)
+    ;; The feed list scrolls inside its own region; a zero basis keeps the
+    ;; region at the space left under the scopes instead of growing with it.
+    (flex :flex-direction 'column :flex-grow 1 :flex-basis '(lh 0)
+          :min-height '(lh 0)
           :gap '((lh 0) (ch 0)) :overflow 'scroll
           :id 'etaf-rss-sidebar-feeds
           :aria-label "订阅源"
