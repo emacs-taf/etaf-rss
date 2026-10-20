@@ -8,6 +8,18 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The reader no longer starts with an empty row above the header, and the
+  status bar sits on the window's last row: the shell dropped its top and
+  bottom inset rows.
+
+- The article list uses the width it has: titles are no longer cut to a few
+  characters beside a 14-column feed name, and the relative time column shows
+  `4 分钟前` instead of `4 分钟`.  The row's columns follow the list's width.
+
+- Wrapped article text fits the reading pane: the width budget now subtracts
+  both panes' horizontal padding, so a long paragraph no longer loses its
+  last words at the pane edge.
+
 - The wheel now acts on the pane under the pointer: a turn over the article
   scrolls the article, a turn over the list moves the selection, and a turn
   over the subscription list scrolls it.  It used to be resolved from the

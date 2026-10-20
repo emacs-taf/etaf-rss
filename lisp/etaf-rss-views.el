@@ -90,32 +90,26 @@
   (let ((time (plist-get row :published)))
     (if time (etaf-rss-relative-time time) "")))
 
-(defun etaf-rss--viewport-columns ()
-  "Return the mounted viewport width in character columns."
-  (max 20 (floor (/ (or (car (etaf-viewport)) (* 80 (frame-char-width)))
-                    (frame-char-width)))))
+(defun etaf-rss--row-columns (pane)
+  "Return the grid columns of one article row inside a PANE-wide list.
+The title takes the remaining space; the feed column appears only when the
+list can spare it, so a narrow list keeps readable titles instead of one
+letter per word."
+  (cond ((>= pane 54) '((ch 2) (fr 1) (ch 12) (ch 9) (ch 2)))
+        ((>= pane 44) '((ch 2) (fr 1) (ch 9) (ch 9) (ch 2)))
+        (t '((ch 2) (fr 1) (ch 9) (ch 2)))))
 
-(defun etaf-rss--title-columns (compact)
-  "Return how many columns an article title may use in COMPACT mode.
-The row is one line: the title takes what remains after the sidebar and the
-list's share of the width, then the index, the feed name (omitted when
-compact), the time, the star and the row's own gaps and padding."
-  (let* ((columns (etaf-rss--viewport-columns))
-         (pane (if compact columns
-                 (/ (- columns (if compact
-                                   etaf-rss--sidebar-narrow-columns
-                                 etaf-rss--sidebar-columns))
-                    2))))
-    ;; 46 = row padding, index, feed, time, star, the row's gaps, and slack so
-    ;; the ellipsis lands inside the cell instead of at its clipped edge.
-    (max 12 (- pane 46))))
-
-(defun etaf-rss--row-columns (compact)
-  "Return the grid columns of one article row.
-COMPACT drops the feed column, which a narrow frame cannot show."
-  (if compact
-      '((ch 2) (fr 1) (ch 9) (ch 2))
-    '((ch 2) (fr 1) (ch 14) (ch 9) (ch 2))))
+(defun etaf-rss--title-columns (pane)
+  "Return how many columns an article title may use in a PANE-wide list.
+The title is the row's only flexible column, so it gets what the fixed
+columns, the row's gaps, its padding and one slack column leave; the same
+column list renders the row, so the budget cannot drift from the grid."
+  (let* ((columns (etaf-rss--row-columns pane))
+         (fixed (apply #'+ (mapcar (lambda (column)
+                                     (if (eq (car column) 'ch) (cadr column) 0))
+                                   columns)))
+         (chrome (+ fixed (* 2 (1- (length columns))) 2 1)))
+    (max 8 (- pane chrome))))
 
 ;;; ---------------------------------------------------------------------------
 ;;; Navigation
@@ -321,14 +315,15 @@ layout; the subtitle carries the counts of the current scope."
                            :active t :on-press on-add)))
 
 (etaf-define-component etaf-rss--view-row
-    (&key index row selected compact press)
+    (&key index row selected pane press)
   "Render article ROW number INDEX, marked SELECTED when it is the selection.
-COMPACT drops the feed column.  PRESS is called with INDEX when the row is
-clicked; an unread row is bold with a filled dot, a starred row carries a
-gold star, and both states never change the text's width."
+PANE is the list's width in columns, which decides whether the row can show
+the feed name.  PRESS is called with INDEX when the row is clicked; an unread
+row is bold with a filled dot, a starred row carries a gold star, and both
+states never change the text's width."
   :view
   (grid :width 'stretch :height '(lh 1) :role 'button :tab-index 0
-        :grid-template-columns (etaf-rss--row-columns compact)
+        :grid-template-columns (etaf-rss--row-columns pane)
         :gap '((lh 0) (ch 1)) :align-items 'center :padding '((lh 0) (ch 1))
         :background-color (and selected (etaf-rss-color :panel2))
         :color (etaf-rss-color :ink)
@@ -343,8 +338,8 @@ gold star, and both states never change the text's width."
                                (etaf-rss-color :accent))))
     (box :height '(lh 1) :overflow 'hidden
       (text (expr (etaf-rss--clip (or (plist-get row :title) "")
-                                  (etaf-rss--title-columns compact)))))
-    (box :if (not compact) :height '(lh 1) :overflow 'hidden
+                                  (etaf-rss--title-columns pane)))))
+    (box :if (>= pane 44) :height '(lh 1) :overflow 'hidden
          :font-weight 'normal :color (etaf-rss-color :dim)
       (text (expr (or (plist-get row :feed-title) ""))))
     (box :height '(lh 1) :justify-self 'end :font-weight 'normal
@@ -354,7 +349,7 @@ gold star, and both states never change the text's width."
       (etaf-ui-icon :if (plist-get row :starred) :name 'star-filled :set etaf-rss--icon-set :size 0.75 :min-width 2 :color (etaf-rss-color :gold)))))
 
 (etaf-define-component etaf-rss--view-list
-    (&key entries start total loaded compact loading refreshing empty-note on-press on-scroll)
+    (&key entries start total loaded pane compact loading refreshing empty-note on-press on-scroll)
   "Render APP's visible article ENTRIES with a range footer.
 START is the 1-based index of the first entry, TOTAL the scope's total and
 LOADED the number of rows loaded.  The list keeps its height while a load or
@@ -373,7 +368,7 @@ the list never scrolls the article."
        :index (plist-get entry :index)
        :row (plist-get entry :row)
        :selected (plist-get entry :selected)
-       :compact compact
+       :pane pane
        :press on-press))
     (box :if (null entries) :height '(lh 4) :text-align 'center
          :color (etaf-rss-color :dim)

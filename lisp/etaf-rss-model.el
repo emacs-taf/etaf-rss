@@ -43,6 +43,12 @@
 (defconst etaf-rss--list-min-columns 36
   "Narrowest article list that still shows a title and a date.")
 
+(defconst etaf-rss--list-inset 2
+  "Horizontal padding of the article list in columns, one side.
+The list and the reading pane each inset their content, so the reading width
+budget has to leave both insets out.  It is the `(ch 2)' padding the list
+pane declares.")
+
 (defconst etaf-rss--reader-inset 4
   "Columns the reading pane spends on its own horizontal insets.")
 
@@ -162,6 +168,7 @@ complete headless reader for scripts and tests."
           :selection (etaf-ref 0 :name 'etaf-rss-selection)
           :window-start (etaf-ref 0 :name 'etaf-rss-window-start)
           :window-rows (etaf-ref 0 :name 'etaf-rss-window-rows)
+          :window-columns (etaf-ref 0 :name 'etaf-rss-window-columns)
           :page-size (etaf-ref etaf-rss-page-size :name 'etaf-rss-page-size)
           :pane (etaf-ref 'list :name 'etaf-rss-pane)
           :layout (etaf-ref 'wide :name 'etaf-rss-layout)
@@ -1133,11 +1140,15 @@ The wide layout spends columns on the sidebar and the article list; a medium
 layout keeps the rail; the reader keeps its own insets and a trailing safety
 column, so a wrapped line never clips."
   (let* ((chrome (pcase layout
+                   ;; Each pane spends two columns of padding on each side,
+                   ;; and the article text must fit the visible box.
                    ('wide (+ etaf-rss--sidebar-columns
-                             (etaf-rss--list-columns columns layout)))
-                   ('medium etaf-rss--sidebar-narrow-columns)
+                             (etaf-rss--list-columns columns layout)
+                             (* 2 etaf-rss--list-inset)))
+                   ('medium (+ etaf-rss--sidebar-narrow-columns
+                               (* 2 etaf-rss--list-inset)))
                    (_ 0))))
-    (max 24 (- columns chrome etaf-rss--reader-inset 2))))
+    (max 24 (- columns chrome (+ etaf-rss--reader-inset 1)))))
 
 (defun etaf-rss--list-columns (columns layout)
   "Return the width of the article list column in COLUMNS and LAYOUT."
@@ -1153,11 +1164,11 @@ column, so a wrapped line never clips."
                      (window-body-height window)
                    (frame-height)))
          (chrome (pcase layout
-                   ('wide 7)
-                   ('medium 11)
+                   ('wide 5)
+                   ('medium 9)
                    ;; The narrow layout also paints the scope chips under the
                    ;; header, one row more than the medium layout.
-                   (_ 12))))
+                   (_ 10))))
     (max 1 (- height chrome))))
 
 (defun etaf-rss--reader-rows-for (window layout)
@@ -1166,9 +1177,9 @@ column, so a wrapped line never clips."
                      (window-body-height window)
                    (frame-height)))
          (chrome (pcase layout
-                   ('wide 9)
-                   ('medium 12)
-                   (_ 12))))
+                   ('wide 7)
+                   ('medium 10)
+                   (_ 10))))
     (max 3 (- height chrome))))
 
 (defun etaf-rss--sync-layout (app &optional window)
@@ -1191,6 +1202,7 @@ resize."
                        (if (and window (window-live-p window))
                            (window-body-height window)
                          (frame-height)))
+      (etaf-rss--write app :window-columns columns)
       (etaf-rss--write app :reader-rows (etaf-rss--reader-rows-for window layout))
       (etaf-rss--write app :reader-columns reader-columns)
       (etaf-rss--clamp-position app))

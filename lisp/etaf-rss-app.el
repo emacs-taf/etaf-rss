@@ -383,6 +383,10 @@ the list selects rows instead of scrolling the article."
    :start (1+ (nth 1 (etaf-rss--page-rows session)))
    :total (etaf-rss--read session :list-total)
    :loaded (length (etaf-rss--read session :rows))
+   :pane (let ((columns (etaf-rss--read session :window-columns)))
+           (if (etaf-rss--compact-layout-p session)
+               columns
+             (etaf-rss--list-columns columns 'wide)))
    :compact (eq (etaf-rss--read session :layout) 'narrow)
    :loading (etaf-rss--read session :loading)
    :refreshing (etaf-rss--read session :refreshing)
@@ -475,10 +479,9 @@ interaction repaints the smallest subtree that changed."
         ;; past the window, because a taller buffer scrolls as a whole and
         ;; would carry the sidebar and the list with the article.
         :overflow 'hidden
-        ;; The border box is the viewport: padding must not add rows beyond
-        ;; the window, or the whole canvas scrolls with the article.
+        ;; The canvas is the window: no inset rows, so the header starts on
+        ;; the first line and the status bar ends on the last one.
         :box-sizing 'border-box
-        :padding-top '(lh 1) :padding-bottom '(lh 1)
         :on-direction #'etaf-rss--direction
         :aria-label "RSS 阅读器"
         :help '("单击选择文章，再次点击打开阅读；窄窗可切换列表与正文。"
