@@ -1136,19 +1136,17 @@ The order is `dark', `light' and back to `dark'."
 
 (defun etaf-rss--reader-capacity (columns layout)
   "Return how many text columns the reading pane holds in COLUMNS.
-The wide layout spends columns on the sidebar and the article list; a medium
-layout keeps the rail; the reader keeps its own insets and a trailing safety
-column, so a wrapped line never clips."
-  (let* ((chrome (pcase layout
-                   ;; Each pane spends two columns of padding on each side,
-                   ;; and the article text must fit the visible box.
-                   ('wide (+ etaf-rss--sidebar-columns
-                             (etaf-rss--list-columns columns layout)
-                             (* 2 etaf-rss--list-inset)))
-                   ('medium (+ etaf-rss--sidebar-narrow-columns
+The wide layout spends columns on the sidebar and splits what is left
+between the article list and the reading pane, which spends its own insets
+plus one safety column; a medium layout keeps the rail and shows one content
+pane.  The share is what the flex row actually gives the reader, so a
+wrapped line never clips at the pane edge."
+  (let* ((share (pcase layout
+                  ('wide (floor (/ (- columns etaf-rss--sidebar-columns) 2)))
+                  ('medium (- columns etaf-rss--sidebar-narrow-columns
                                (* 2 etaf-rss--list-inset)))
-                   (_ 0))))
-    (max 24 (- columns chrome (+ etaf-rss--reader-inset 1)))))
+                  (_ columns))))
+    (max 24 (- share (+ etaf-rss--reader-inset 1)))))
 
 (defun etaf-rss--list-columns (columns layout)
   "Return the width of the article list column in COLUMNS and LAYOUT."

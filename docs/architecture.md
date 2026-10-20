@@ -73,9 +73,11 @@ keys / mouse ─→ app commands ─→ model actions ─→ service client
   the budget it committed until the prompt closes, like the canvas, which Ebox
   leaves at its committed viewport.
 - **Reading width.** The article is wrapped once per article and width; the
-  reader only slices the result. `etaf-rss--reader-capacity` subtracts the
-  chrome and insets, and `etaf-rss-reading-measure` caps the column, so a line
-  is never clipped and prose is not stretched across a wide frame.
+  reader only slices the result. `etaf-rss--reader-capacity` takes the share
+  the flex row actually gives the reading pane (in a wide frame the sidebar
+  first, then an even split with the article list), subtracts the pane's
+  insets and a safety column, and `etaf-rss-reading-measure` caps the column,
+  so a line is never clipped and prose is not stretched across a wide frame.
 - **Retention.** Each feed keeps its newest `etaf-rss-articles-per-feed`
   articles; starred articles beyond that are kept up to
   `etaf-rss-starred-limit`. The store is pruned at write time, so its size is

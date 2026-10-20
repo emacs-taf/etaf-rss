@@ -16,9 +16,10 @@ project uses [Semantic Versioning](https://semver.org/).
   characters beside a 14-column feed name, and the relative time column shows
   `4 分钟前` instead of `4 分钟`.  The row's columns follow the list's width.
 
-- Wrapped article text fits the reading pane: the width budget now subtracts
-  both panes' horizontal padding, so a long paragraph no longer loses its
-  last words at the pane edge.
+- Wrapped article text fits the reading pane: the width budget takes the share
+  the frame actually gives the pane (the list and the reader split what the
+  sidebar leaves) and subtracts the pane's horizontal padding, so a long
+  paragraph no longer loses its last words at the pane edge.
 
 - The wheel now acts on the pane under the pointer: a turn over the article
   scrolls the article, a turn over the list moves the selection, and a turn
