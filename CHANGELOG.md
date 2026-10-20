@@ -12,9 +12,11 @@ project uses [Semantic Versioning](https://semver.org/).
   status bar sits on the window's last row: the shell dropped its top and
   bottom inset rows.
 
-- The article list uses the width it has: titles are no longer cut to a few
-  characters beside a 14-column feed name, and the relative time column shows
-  `4 分钟前` instead of `4 分钟`.  The row's columns follow the list's width.
+- The article list uses the width it has: the row's columns follow the width
+  the flex row gives the list, a source name appears only when the title still
+  has room beside it (`>= 52` columns of list), and the relative time shows
+  `4 分钟前` instead of `4 分钟`.  At 120 columns a title gets 26 cells
+  instead of 8.
 
 - Wrapped article text fits the reading pane: the width budget takes the share
   the frame actually gives the pane (the list and the reader split what the

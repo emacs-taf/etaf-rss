@@ -95,8 +95,10 @@
 The title takes the remaining space; the feed column appears only when the
 list can spare it, so a narrow list keeps readable titles instead of one
 letter per word."
-  (cond ((>= pane 54) '((ch 2) (fr 1) (ch 12) (ch 9) (ch 2)))
-        ((>= pane 44) '((ch 2) (fr 1) (ch 9) (ch 9) (ch 2)))
+  ;; A feed name costs the title nine columns, so it only earns its place
+  ;; once the title still gets a readable width beside it.
+  (cond ((>= pane 62) '((ch 2) (fr 1) (ch 12) (ch 9) (ch 2)))
+        ((>= pane 52) '((ch 2) (fr 1) (ch 9) (ch 9) (ch 2)))
         (t '((ch 2) (fr 1) (ch 9) (ch 2)))))
 
 (defun etaf-rss--title-columns (pane)
@@ -339,7 +341,7 @@ states never change the text's width."
     (box :height '(lh 1) :overflow 'hidden
       (text (expr (etaf-rss--clip (or (plist-get row :title) "")
                                   (etaf-rss--title-columns pane)))))
-    (box :if (>= pane 44) :height '(lh 1) :overflow 'hidden
+    (box :if (>= pane 52) :height '(lh 1) :overflow 'hidden
          :font-weight 'normal :color (etaf-rss-color :dim)
       (text (expr (or (plist-get row :feed-title) ""))))
     (box :height '(lh 1) :justify-self 'end :font-weight 'normal

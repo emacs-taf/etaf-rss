@@ -1142,18 +1142,22 @@ plus one safety column; a medium layout keeps the rail and shows one content
 pane.  The share is what the flex row actually gives the reader, so a
 wrapped line never clips at the pane edge."
   (let* ((share (pcase layout
-                  ('wide (floor (/ (- columns etaf-rss--sidebar-columns) 2)))
+                  ('wide (etaf-rss--list-columns columns layout))
                   ('medium (- columns etaf-rss--sidebar-narrow-columns
                                (* 2 etaf-rss--list-inset)))
                   (_ columns))))
     (max 24 (- share (+ etaf-rss--reader-inset 1)))))
 
 (defun etaf-rss--list-columns (columns layout)
-  "Return the width of the article list column in COLUMNS and LAYOUT."
+  "Return the width the article list column gets in COLUMNS and LAYOUT.
+The wide layout puts the list and the reading pane in one row, each with
+`flex-grow 1' from a zero basis, so the list's width is half of what the
+sidebar leaves; a single-pane layout gives it the whole width.  Every budget
+that depends on the list (its title columns, the reading width) reads this,
+so a budget cannot assume a share the flex row does not give."
   (if (eq layout 'wide)
-      (let* ((body (- columns etaf-rss--sidebar-columns))
-             (list (max etaf-rss--list-min-columns (floor (* body 0.42)))))
-        (min list (max etaf-rss--list-min-columns (- body 40))))
+      (max etaf-rss--list-min-columns
+           (floor (/ (- columns etaf-rss--sidebar-columns) 2)))
     columns))
 
 (defun etaf-rss--page-size-for (window layout)
