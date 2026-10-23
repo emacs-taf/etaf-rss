@@ -49,7 +49,8 @@ At a narrow frame the scopes move into a header strip:
   requests, per-feed errors shown in the sidebar, an idle timer, and a manual
   `R` for every subscription.
 - Appearance: dark and light palettes published as ETAF UI theme tokens, so
-  shared controls follow the reader.
+  shared controls follow the reader.  A floating panel's title-bar switch
+  drives the same mode cell as `T`, so the messages repaint with the panel.
 - Layout: three responsive breakpoints (sidebar + list + reader, narrow
   sidebar + one pane, scope chips + one pane); every control is reachable
   with the keyboard, the mouse and the wheel.

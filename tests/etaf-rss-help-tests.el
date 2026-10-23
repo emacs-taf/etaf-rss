@@ -13,11 +13,11 @@
     (let* ((directory (make-temp-file "etaf-rss-keys-" t))
            (etaf-rss-buffer-name " *RSS keys acceptance*")
            (etaf-rss-refresh-interval nil)
-           (etaf-rss-theme-mode 'dark)
            (model (etaf-rss-create
                    :client (etaf-rss-make-client
                             :data-file (expand-file-name "data.json" directory))))
-           (buffer (etaf-rss-open model))
+           (buffer (progn (etaf-rss-set-theme model 'dark)
+                          (etaf-rss-open model)))
            (canvas (lambda ()
                      (with-current-buffer buffer
                        ;; The application owns the base remap; Ebox adds

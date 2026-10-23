@@ -437,6 +437,7 @@ interaction repaints the smallest subtree that changed."
                           (signal 'etaf-rss-error
                                   '("etaf-rss-app needs the :model from `etaf-rss-create'"))))
              (palette (etaf-rss--ref session :theme))
+             (mode (etaf-rss--ref session :theme-mode))
              (on-locate (lambda (scope) (etaf-rss-locate session scope)))
              (on-select-source (lambda (key)
                                  (etaf-rss-locate
@@ -458,7 +459,21 @@ interaction repaints the smallest subtree that changed."
              (on-pane (lambda (target) (etaf-rss-show-pane session target))))
   :setup
   (progn
+    ;; The palette lookups in the Views ask this buffer which appearance the
+    ;; mounted session paints, so a host's title-bar switch and `T' both
+    ;; repaint the rows instead of only the tokens shared with etaf-ui.
+    (setq-local etaf-rss--session-mode mode)
     (etaf-theme-provide palette)
+    ;; One appearance state: a host's title-bar switch writes the session's
+    ;; mode cell and the palette follows it, so the reader and the panel that
+    ;; frames it paint the same choice.
+    (etaf-watch mode
+                (lambda (mode _old)
+                  (etaf-rss--write session :theme (etaf-rss-theme-defaults mode)))
+                :immediate t :name 'etaf-rss-palette)
+    (when-let* ((surface (etaf-surface-host)))
+      (etaf-surface-declare surface :theme palette :mode mode
+                            :modes etaf-rss--surface-modes))
     (etaf-on-mounted
      (lambda ()
        (etaf-rss--start session)

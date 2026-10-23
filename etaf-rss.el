@@ -227,7 +227,9 @@
 ;; Function: etaf-rss-set-theme (app mode)
 ;; Switch APP to the appearance MODE and return it.
 ;; MODE is `dark' or `light'; anything else signals `etaf-rss-error'.  The
-;; choice is remembered by the service, so the next session starts with it.
+;; choice becomes the reader's live appearance, so mounted rows repaint, and
+;; it is remembered by the service; a panel's title-bar switch writes the same
+;; cell.
 ;;
 ;; Function: etaf-rss-cycle-theme (app)
 ;; Switch APP to the other appearance and return it.
@@ -414,10 +416,11 @@
 ;; User-Agent header sent with every feed request.
 ;;
 ;; Variable: etaf-rss-theme-mode
-;; Palette used by `etaf-rss-color' and `etaf-rss-theme-defaults': `dark'
-;; (default) or `light'.  A mounted reader replaces its view when the
-;; session's `:theme' value changes, which is what the reader's T key does, so
-;; every painted surface takes the new palette at once.
+;; Appearance a new reader starts with: `dark' (default) or `light'.  The
+;; running choice is one live mode cell that `T' and a panel's title-bar
+;; switch both write; `etaf-rss-color' and `etaf-rss-theme-defaults' read it,
+;; so every painted surface takes the new palette at once.  This option only
+;; seeds that cell.
 ;;
 ;; Variable: etaf-rss-reading-measure
 ;; Preferred width of the article reading column in columns, default 58.

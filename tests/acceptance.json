@@ -111,6 +111,11 @@
       "purpose": "The palette cycles and sets between dark and light, an unknown appearance signals, and the UI tokens match the palette."
     },
     {
+      "name": "etaf-rss-tests-declares-its-surface-to-a-host",
+      "file": "tests/etaf-rss-tests.el",
+      "purpose": "A host frames the reader from the palette, mode cell and modes it declares, so a panel's title-bar switch repaints every row instead of only the frame chrome."
+    },
+    {
       "name": "etaf-rss-tests-miniflux-backend-reads-a-server",
       "file": "tests/etaf-rss-miniflux-tests.el",
       "purpose": "The Miniflux backend answers the reader's own request protocol, so a server's categories, counters, feeds and entries fill the same sidebar and list."

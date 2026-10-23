@@ -346,10 +346,67 @@
 (ert-deftest etaf-rss-tests-theme-switches ()
   "The palette switches between dark and light and persists the choice."
   (etaf-rss-tests--with-session session
-    (should (eq (plist-get (etaf-rss-state (car session)) :theme-mode) 'dark))
-    (should (etaf-rss-cycle-theme (car session)))
-    (should (eq (plist-get (etaf-rss-state (car session)) :theme-mode) 'light))
+    (let ((start (plist-get (etaf-rss-state (car session)) :theme-mode)))
+      (should (memq start '(dark light)))
+      (should (etaf-rss-cycle-theme (car session)))
+      (should-not (eq start (plist-get (etaf-rss-state (car session)) :theme-mode))))
     (should (etaf-rss-set-theme (car session) 'dark))
     (should (eq (plist-get (etaf-rss-state (car session)) :theme-mode) 'dark))
     (should-error (etaf-rss-set-theme (car session) 'sepia) :type 'etaf-rss-error)
     (should (equal (etaf-rss-color :bg 'dark) (plist-get (etaf-rss-theme-defaults 'dark) :ui-bg)))))
+
+(defun etaf-rss-tests--row-painting (buffer color)
+  "Return the first position in BUFFER whose face paints COLOR as background."
+  (with-current-buffer buffer
+    (let ((pos (point-min))
+          found)
+      (while (and (< pos (point-max)) (not found))
+        (when (equal color
+                     (plist-get (get-text-property pos 'face) :background))
+          (setq found pos))
+        (setq pos (1+ pos)))
+      found)))
+
+(defun etaf-rss-tests--painted-background (buffer position)
+  "Return the background BUFFER paints at POSITION."
+  (with-current-buffer buffer
+    (plist-get (get-text-property position 'face) :background)))
+
+(etaf-define-component etaf-rss-tests--framing-host (&key surface session)
+  "Provide SURFACE to the reader SESSION and render it below."
+  :setup (etaf-surface-provide surface)
+  :render (etaf-rss-view session))
+
+(ert-deftest etaf-rss-tests-declares-its-surface-to-a-host ()
+  "A host frames the reader from the surface the reader declares.
+The panel's title-bar switch writes the reader's mode cell, so every mounted
+row repaints with the new palette instead of only the frame chrome."
+  (etaf-rss-tests--with-session session
+    (let* ((surface (etaf-surface-create))
+           (buffer (generate-new-buffer " *etaf-rss framing host*")))
+      (unwind-protect
+          (progn
+            (switch-to-buffer buffer)
+            (etaf-mount buffer
+                        (etaf-view (etaf-rss-tests--framing-host
+                                    :surface surface :session (car session))))
+            (etaf-runtime-flush (etaf-runtime-for-buffer buffer))
+            (should (equal '((light . "亮") (dark . "暗"))
+                           (etaf-surface-modes surface)))
+            (let* ((mode (etaf-value (etaf-surface-mode surface)))
+                   (other (if (eq mode 'dark) 'light 'dark))
+                   (before (etaf-rss-color :bg))
+                   (pos (etaf-rss-tests--row-painting buffer before)))
+              (should pos)
+              (etaf-set-value (etaf-surface-mode surface) other)
+              (etaf-runtime-flush (etaf-runtime-for-buffer buffer))
+              (should (eq other (etaf-value (etaf-surface-mode surface))))
+              (should-not (equal before (etaf-rss-color :bg)))
+              (should (equal (etaf-rss-color :bg)
+                             (etaf-rss-tests--painted-background buffer pos)))
+              (should (equal (plist-get (etaf-value (etaf-surface-theme surface))
+                                        :ui-bg)
+                             (etaf-rss-color :bg)))))
+        (when-let* ((runtime (etaf-runtime-for-buffer buffer)))
+          (etaf-unmount runtime))
+        (kill-buffer buffer)))))

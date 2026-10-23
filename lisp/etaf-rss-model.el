@@ -187,8 +187,7 @@ complete headless reader for scripts and tests."
           :reader-starred (etaf-ref nil :name 'etaf-rss-reader-starred)
           :reader-url (etaf-ref nil :name 'etaf-rss-reader-url)
           :query (etaf-ref "" :name 'etaf-rss-query)
-          :theme-mode (etaf-ref (or (ignore-errors etaf-rss-theme-mode) 'dark)
-                                :name 'etaf-rss-theme-mode)
+          :theme-mode etaf-rss--theme-mode
           :theme (etaf-ref (etaf-rss-theme-defaults) :name 'etaf-rss-theme)
           :loading (etaf-ref nil :name 'etaf-rss-loading)
           :refreshing (etaf-ref nil :name 'etaf-rss-refreshing)
@@ -1103,9 +1102,11 @@ at the end when the scope it shows was affected."
 (defun etaf-rss-set-theme (app mode)
   "Switch APP to the appearance MODE and return it.
 MODE is `dark' or `light'; anything else signals `etaf-rss-error'.  The
-choice is remembered by the service, so the next session starts with it."
+choice is remembered by the service, and it seeds the next session, so the
+reader keeps it after a restart."
   (unless (memq mode '(dark light))
     (signal 'etaf-rss-error (list (format "未知外观：%S" mode))))
+  (setq etaf-rss-theme-mode mode)
   (etaf-rss--write app :theme-mode mode)
   (etaf-rss--write app :theme (etaf-rss-theme-defaults mode))
   (etaf-rss--call app (list :op :set-theme :theme (symbol-name mode)))

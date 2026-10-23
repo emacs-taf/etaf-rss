@@ -40,16 +40,34 @@
 (defcustom etaf-rss-theme-mode 'dark
   "Appearance used by a new reader session.
 `dark' (default) renders the reader's own dark surface and `light' the light
-one; this is independent of the active Emacs theme."
+one; this is independent of the active Emacs theme.  The running choice is
+one live mode cell that `T' and a panel's title-bar switch both write; this
+option only seeds it."
   :type '(choice (const :tag "Dark" dark) (const :tag "Light" light))
   :group 'etaf-rss)
 
+(defconst etaf-rss--surface-modes
+  '((light . "亮") (dark . "暗"))
+  "Appearance modes the reader offers its host, in display order.
+The reader has two maintained palettes, so a panel's title bar offers these
+two segments instead of the standard three.")
+
+(defvar etaf-rss--theme-mode (etaf-ref etaf-rss-theme-mode)
+  "Live appearance of the reader.
+`T' and a panel's title-bar switch both write this cell, and the palette and
+the tokens are derived from it, so every painted surface follows one state.
+`etaf-rss-theme-mode' only seeds it.")
+
+(defun etaf-rss--mode (&optional mode)
+  "Return MODE, or the reader's live appearance."
+  (or mode (etaf-value etaf-rss--theme-mode)))
+
 (defun etaf-rss-color (key &optional mode)
   "Return the palette color named KEY.
-MODE defaults to `etaf-rss-theme-mode'; an unknown mode falls back to `dark'.
-An unknown KEY signals `etaf-rss-error' instead of returning a fallback,
-because a typo would otherwise paint an invisible surface."
-  (let* ((mode (let ((mode (or mode etaf-rss-theme-mode)))
+MODE defaults to the reader's live appearance; an unknown mode falls back to
+`dark'.  An unknown KEY signals `etaf-rss-error' instead of returning a
+fallback, because a typo would otherwise paint an invisible surface."
+  (let* ((mode (let ((mode (etaf-rss--mode mode)))
                  (if (assq mode etaf-rss--palettes) mode 'dark)))
          (palette (cdr (assq mode etaf-rss--palettes)))
          (color (plist-get palette key)))
@@ -62,7 +80,8 @@ because a typo would otherwise paint an invisible surface."
 MODE defaults to `etaf-rss-theme-mode'.  The result is passed to
 `etaf-theme-provide' by the application so shared etaf-ui Components use the
 same colors as the reader's own Views."
-  (let* ((dark (eq (or mode etaf-rss-theme-mode) 'dark))
+  (let* ((mode (etaf-rss--mode mode))
+         (dark (eq mode 'dark))
          (bg (etaf-rss-color :bg mode))
          (panel (etaf-rss-color :panel mode))
          (panel3 (etaf-rss-color :panel3 mode))
