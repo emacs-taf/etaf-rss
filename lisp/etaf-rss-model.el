@@ -274,7 +274,10 @@ canvas and shrinks both panes by the excess rows, at most twice."
   (when (and (window-live-p window)
              (buffer-live-p (plist-get app :buffer))
              (eq (window-buffer window) (plist-get app :buffer)))
-    (let ((row (max 1 (frame-char-height (window-frame window))))
+    ;; The fit counts rows on the canvas that was painted, so its row height
+    ;; is the canvas's line, not the frame's own face.
+    (let ((row (max 1 (or (plist-get (ignore-errors (etaf-display-metrics)) :line-height)
+                         (frame-char-height (window-frame window)))))
           (attempts 0))
       (while (< attempts 2)
         (setq attempts (1+ attempts))
